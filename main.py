@@ -14,7 +14,7 @@ class User(db.Model):
 	email = db.Column(db.String(120), unique=True, nullable=False)
 	password = db.Column(db.String(120), unique=False, nullable=False)
 
-	class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+	class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=True)
 	classe = db.relationship('Class', backref=db.backref('users', lazy=True))
 
 	def __repr__(self):
@@ -36,7 +36,7 @@ class Proposition(db.Model):
 	date_proposition = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 	class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
-	classe = db.relationship('Class', backref=db.backref('users', lazy=True))
+	classe = db.relationship('Class', backref=db.backref('propositions', lazy=True))
 
 	subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
 	subject = db.relationship('Subject', backref=db.backref('propositions', lazy=True))
@@ -60,10 +60,10 @@ class Tutorial(db.Model):
 	date_proposition = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 	class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
-	classe = db.relationship('Class', backref=db.backref('users', lazy=True))
+	classe = db.relationship('Class', backref=db.backref('tutorials', lazy=True))
 
 	subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
-	subject = db.relationship('Subject', backref=db.backref('propositions', lazy=True))
+	subject = db.relationship('Subject', backref=db.backref('tutorials', lazy=True))
 
 	owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 	owner = db.relationship('User', backref=db.backref('tutorials_owner', lazy=True))
@@ -89,12 +89,6 @@ class TutorialSubscription(db.Model):
 class Thread(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	title = db.Column(db.Boolean, default=False, nullable=False)
-
-	participant_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-	participant = db.relationship('User', backref=db.backref('tutorial_participation', lazy=True))
-
-	tutorial_id = db.Column(db.Integer, db.ForeignKey('tutorial.id'), nullable=False)
-	tutorial = db.relationship('Tutorial', backref=db.backref('participant', lazy=True))
 
 	owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 	owner = db.relationship('User', backref=db.backref('threads', lazy=True))
@@ -156,9 +150,10 @@ def test():
 
 
 # Endpoint to get a list of all users
-@app.route("/api/users/")
+@app.route("/api/users/", methods=['GET'])
 def users():
-	return "Users"
+	users = User.query.all()
+	return jsonify(users)
 
 
 # Endpoint to get a list of all courses
