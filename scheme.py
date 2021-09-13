@@ -1,11 +1,27 @@
-import datetime
+from datetime import datetime
 from dataclasses import dataclass
 from conf import db
 
 
 @dataclass
+class Class(db.Model):
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+	title = db.Column(db.String(80), nullable=False)
+
+	def __repr__(self):
+		return '<Post %r>' % self.title
+
+
+@dataclass
 class User(db.Model):
-	id = db.Column(db.Integer, primary_key=True, auto_increment=True)
+	id: int
+	first_name: str
+	last_name: str
+	email: str
+	password: str
+	classe: Class
+
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 	first_name = db.Column(db.String(80), unique=False, nullable=False)
 	last_name = db.Column(db.String(80), unique=False, nullable=False)
 	email = db.Column(db.String(120), unique=True, nullable=False)
@@ -19,17 +35,24 @@ class User(db.Model):
 
 
 @dataclass
-class Class(db.Model):
-	id = db.Column(db.Integer, primary_key=True, auto_increment=True)
-	title = db.Column(db.String(80), nullable=False)
+class Subject(db.Model):
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+	title = db.Column(db.String(50), nullable=False)
 
 	def __repr__(self):
-		return '<Post %r>' % self.title
+		return '<Category %r>' % self.title
 
 
 @dataclass
 class Proposition(db.Model):
-	id = db.Column(db.Integer, primary_key=True, auto_increment=True)
+	id: int
+	title: str
+	description: str
+	date_proposition: datetime
+	classe: Class
+	subject: Subject
+
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 	title = db.Column(db.String(80), nullable=False)
 	description = db.Column(db.Text, nullable=False)
 	date_proposition = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -45,17 +68,16 @@ class Proposition(db.Model):
 
 
 @dataclass
-class Subject(db.Model):
-	id = db.Column(db.Integer, primary_key=True, auto_increment=True)
-	title = db.Column(db.String(50), nullable=False)
-
-	def __repr__(self):
-		return '<Category %r>' % self.title
-
-
-@dataclass
 class Tutorial(db.Model):
-	id = db.Column(db.Integer, primary_key=True, auto_increment=True)
+	id: int
+	title: str
+	description: str
+	date_proposition: datetime
+	classe: Class
+	subject: Subject
+	owner: User
+
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 	title = db.Column(db.String(80), nullable=False)
 	description = db.Column(db.Text, nullable=False)
 	date_proposition = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -75,7 +97,12 @@ class Tutorial(db.Model):
 
 @dataclass
 class TutorialSubscription(db.Model):
-	id = db.Column(db.Integer, primary_key=True, auto_increment=True)
+	id: int
+	confirmed: bool
+	participant: User
+	tutorial: Tutorial
+
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 	confirmed = db.Column(db.Boolean, default=False, nullable=False)
 
 	participant_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -90,7 +117,11 @@ class TutorialSubscription(db.Model):
 
 @dataclass
 class Thread(db.Model):
-	id = db.Column(db.Integer, primary_key=True, auto_increment=True)
+	id: int
+	title: str
+	owner: User
+
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 	title = db.Column(db.Boolean, default=False, nullable=False)
 
 	owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -101,21 +132,14 @@ class Thread(db.Model):
 
 
 @dataclass
-class CommentVote(db.Model):
-	id = db.Column(db.Integer, primary_key=True, auto_increment=True)
-	vote = db.Column(db.Boolean, default=False, nullable=False)
-	created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
-	comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
-	comment = db.relationship('Comment', backref=db.backref('votes', lazy=True))
-
-	def __repr__(self):
-		return '<Post %r>' % self.title
-
-
-@dataclass
 class Comment(db.Model):
-	id = db.Column(db.Integer, primary_key=True, auto_increment=True)
+	id: int
+	text: str
+	created_at: datetime
+	owner: User
+	thread: Thread
+
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 	text = db.Column(db.Boolean, default=False, nullable=False)
 	created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
@@ -133,8 +157,30 @@ class Comment(db.Model):
 
 
 @dataclass
+class CommentVote(db.Model):
+	id: int
+	vote: int
+	created_at: datetime
+	comment: Comment
+
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+	vote = db.Column(db.Boolean, default=False, nullable=False)
+	created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+	comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
+	comment = db.relationship('Comment', backref=db.backref('votes', lazy=True))
+
+	def __repr__(self):
+		return '<Post %r>' % self.title
+
+
+@dataclass
 class File(db.Model):
-	id = db.Column(db.Integer, primary_key=True, auto_increment=True)
+	id: int
+	title: str
+	thread: Thread
+
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 	title = db.Column(db.Boolean, default=False, nullable=False)
 
 	thread_id = db.Column(db.Integer, db.ForeignKey('thread.id'), nullable=False)
