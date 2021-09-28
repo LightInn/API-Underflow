@@ -1,7 +1,9 @@
+import uuid
 from datetime import datetime
 from dataclasses import dataclass
 from conf import db
-
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy_utils import UUIDType
 
 @dataclass
 class Class(db.Model):
@@ -14,14 +16,14 @@ class Class(db.Model):
 
 @dataclass
 class User(db.Model):
-	id: int
+	id: str
 	first_name: str
 	last_name: str
 	email: str
 	password: str
 	classe: Class
 
-	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+	id = db.Column(UUIDType(binary=False), primary_key=True, default=uuid.uuid4())
 	first_name = db.Column(db.String(80), unique=False, nullable=False)
 	last_name = db.Column(db.String(80), unique=False, nullable=False)
 	email = db.Column(db.String(120), unique=True, nullable=False)
