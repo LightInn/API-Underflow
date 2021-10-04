@@ -1,5 +1,4 @@
 from flask import jsonify
-
 from conf import app
 from scheme import *
 
