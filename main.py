@@ -1,10 +1,10 @@
 from endpoints import *
 
 db.create_all()
-users = User( first_name="Andy", last_name="Cinquin", email="andy.cinquin@gmail.com", password="123")
-db.session.add(users)
-db.session.commit()
+# new_user = User(first_name='Mathis', last_name='Gauthier', email='mathis.gauthier@epsi.fr',
+#                 password=bcrypt.hashpw(b'123456', salt=bcrypt.gensalt()))
+# db.session.add(new_user)
+# db.session.commit()
 
 if __name__ == "__main__":
-
-	app.run(debug=True)
+    app.run(debug=True)

@@ -1,6 +1,8 @@
 import uuid
 from datetime import datetime
 from dataclasses import dataclass
+import bcrypt
+import pytz
 from conf import db
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy_utils import UUIDType
@@ -18,17 +20,33 @@ class User(db.Model):
     first_name: str
     last_name: str
     email: str
-    password: str
+    admin: bool
+    created_on: datetime
+    last_login: datetime
     classe: Class
 
-    id = db.Column(UUIDType(binary=False), primary_key=True, default=uuid.uuid4())
+    id = db.Column(UUIDType(binary=False), primary_key=True)
     first_name = db.Column(db.String(80), unique=False, nullable=False)
     last_name = db.Column(db.String(80), unique=False, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(120), unique=False, nullable=False)
+    password_hash = db.Column(db.String(120), unique=False, nullable=False)
+    admin = db.Column(db.Boolean, unique=False, nullable=False, default=False)
+    created_on = db.Column(db.DateTime, unique=False, nullable=False)
+    last_login = db.Column(db.DateTime, unique=False, nullable=True)
 
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=True)
     classe = db.relationship('Class', backref=db.backref('users', lazy=True))
+
+    @property
+    def password(self):
+        raise AttributeError('password not readable')
+
+    @password.setter
+    def password(self, password):
+        self.password_hash = bcrypt.hashpw(password, bcrypt.gensalt())
+
+    def verify_password(self, password):
+        return bcrypt.checkpw(password, self.password_hash)
 
 
 @dataclass
@@ -49,7 +67,7 @@ class Proposition(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(80), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    date_proposition = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    date_proposition = db.Column(db.DateTime, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
 
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
     classe = db.relationship('Class', backref=db.backref('propositions', lazy=True))
@@ -71,7 +89,7 @@ class Tutorial(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(80), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    date_proposition = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    date_proposition = db.Column(db.DateTime, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
 
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
     classe = db.relationship('Class', backref=db.backref('tutorials', lazy=True))
@@ -123,7 +141,7 @@ class Comment(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     text = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
 
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     owner = db.relationship('User', backref=db.backref('comments', lazy=True))
@@ -144,7 +162,7 @@ class CommentVote(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     vote = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
 
     comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
     comment = db.relationship('Comment', backref=db.backref('votes', lazy=True))

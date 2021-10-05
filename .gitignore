@@ -3,3 +3,4 @@ __pycache__/
 .env
 venv/
 mydata.json
+aaa.db
