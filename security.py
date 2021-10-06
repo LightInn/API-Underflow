@@ -2,7 +2,7 @@ from datetime import timedelta
 import jwt
 from flask import jsonify, request, make_response
 from flask_wtf.csrf import CSRFError, generate_csrf, validate_csrf
-from conf import app
+from conf import app, csrf
 import pytz
 
 
@@ -21,3 +21,17 @@ def validation_jwt(token_unverified):
         return False
 
     return True
+
+
+# @app.before_request
+# def check_csrf():
+#     print('csrf protect')
+#     csrf.protect()
+
+
+# @app.after_request
+# def set_xsrf_cookie(response):
+#     print('after_request')
+#     response.set_cookie('X-CSRFToken',
+#                         generate_csrf(secret_key=app.config['WTF_CSRF_SECRET_KEY'], token_key=app.config['TOKEN_KEY']))
+#     return response

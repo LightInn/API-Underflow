@@ -1,8 +1,10 @@
+import secrets
 from conf import app
 from scheme import *
 import pytz
 import conf
 from security import *
+from flask import after_this_request, request
 
 
 @app.errorhandler(CSRFError)
@@ -12,15 +14,21 @@ def handle_csrf_error(e):
     }), 401
 
 
+@app.route("/csrf-token/", methods=["GET"])
+def home():
+    csrf_token = generate_csrf(secret_key=app.config['WTF_CSRF_SECRET_KEY'], token_key=app.config['TOKEN_KEY'])
+    return jsonify({
+        'X-CSRF-Token': csrf_token
+    })
+
+
 # Endpoint to test the API connectivity
 @app.route("/test/", methods=['GET'])
 def test():
-    # csrf_token = generate_csrf(secret_key='test', token_key='test')
     if not verify_authentication(request.headers):
         return jsonify({
             'status': 'invalid token'
         }), 401
-
     return jsonify({
         'status': 'OK'
     }), 200
@@ -33,7 +41,6 @@ def users():
         return jsonify({
             'status': 'invalid token'
         }), 401
-
     users = User.query.all()
     return jsonify(users)
 
@@ -58,6 +65,7 @@ def register():
 @app.route("/login/", methods=["POST"])
 def login():
     data = request.get_json()
+    print(request.headers)
     user = User.query.filter_by(email=data['email']).first()
     if user is None:
         return jsonify({
@@ -69,7 +77,7 @@ def login():
             {'id': str(user.id), 'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(minutes=30)},
             app.config['SECRET_KEY'], algorithm="HS256")
         return jsonify({
-            'token': 'Bearer ' + token
+            'token': token
         })
     return jsonify({
         'error': 'Wrong email or password'
