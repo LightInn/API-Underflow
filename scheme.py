@@ -12,6 +12,9 @@ from sqlalchemy_utils import UUIDType
 
 @dataclass
 class Class(db.Model):
+    id: int
+    title: str
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(80), nullable=False)
 
@@ -32,10 +35,10 @@ class User(db.Model):
     first_name = db.Column(db.String(80), unique=False, nullable=False)
     last_name = db.Column(db.String(80), unique=False, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(120), unique=False, nullable=False)
+    password_hash = db.Column(db.String(255), unique=False, nullable=False)
     activated = db.Column(db.Boolean, unique=False, nullable=False, default=False)
     admin = db.Column(db.Boolean, unique=False, nullable=False, default=False)
-    created_on = db.Column(db.DateTime, unique=False, nullable=False)
+    created_on = db.Column(db.DateTime, unique=False, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
     last_login = db.Column(db.DateTime, unique=False, nullable=True)
 
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=True)
@@ -55,8 +58,17 @@ class User(db.Model):
 
 @dataclass
 class Subject(db.Model):
+    id: int
+    title: str
+    validated: bool
+    proposePar: User
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    title = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(50), unique=True, nullable=False)
+    validated = db.Column(db.Boolean, nullable=False, default=False)
+
+    user_id = db.Column(UUIDType(binary=False), db.ForeignKey('user.id'), nullable=False)
+    proposePar = db.relationship('User', backref=db.backref('subject_demandeur', lazy='dynamic'))
 
 
 @dataclass
@@ -66,6 +78,7 @@ class Proposition(db.Model):
     date_butoir: datetime
     classe: Class
     subject: Subject
+    owner: User
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(80), nullable=False)
@@ -76,6 +89,9 @@ class Proposition(db.Model):
 
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
     subject = db.relationship('Subject', backref=db.backref('propositions', lazy='dynamic'))
+
+    owner_id = db.Column(UUIDType(binary=False), db.ForeignKey('user.id'), nullable=False)
+    owner = db.relationship('User', backref=db.backref('owner_proposition', lazy='dynamic'))
 
 
 @dataclass
@@ -91,11 +107,11 @@ class Course(db.Model):
     owner: User
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    title = db.Column(db.String(80), nullable=False)
-    description = db.Column(db.Text, nullable=False)
+    title = db.Column(db.String(80), unique=False, nullable=False)
+    description = db.Column(db.String(1000), unique=False, nullable=False)
     date_start = db.Column(db.DateTime, nullable=False)
     duration = db.Column(DECIMAL(2, 1), nullable=True)
-    ended = db.Column(db.Boolean, nullable=False)
+    ended = db.Column(db.Boolean, nullable=False, default=False)
 
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
     classe = db.relationship('Class', backref=db.backref('courses', lazy='dynamic'))
@@ -103,7 +119,7 @@ class Course(db.Model):
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
     subject = db.relationship('Subject', backref=db.backref('courses', lazy='dynamic'))
 
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    owner_id = db.Column(UUIDType(binary=False), db.ForeignKey('user.id'), nullable=False)
     owner = db.relationship('User', backref=db.backref('courses_owner', lazy='dynamic'))
 
 

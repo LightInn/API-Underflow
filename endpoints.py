@@ -1,22 +1,61 @@
-import secrets
-from conf import app
+from conf import login_manager
 from scheme import *
-import pytz
-import conf
 from security import *
-from flask import after_this_request, request
+from flask import request, Response, abort
 
 
-@app.errorhandler(CSRFError)
-def handle_csrf_error(e):
-    return jsonify({
-        'error': e.description,
-    }), 401
+@app.route("/populate/", methods=["GET"])
+def populate():
+    # new_user = User(id=uuid.uuid4(), first_name='Mathis', last_name='Gauthier', email='mathis.gauthier@epsi.fr',
+    #                 password=str.encode('123456'))
+    # db.session.add(new_user)
+    # db.session.commit()
+    # new_class = Class(title='B1')
+    # new_class2 = Class(title='B2')
+    # db.session.add(new_class)
+    # db.session.commit()
+    # db.session.add(new_class2)
+    # db.session.commit()
+    # new_subject = Subject(title='PHP')
+    # new_subject2 = Subject(title='JS')
+    # db.session.add(new_subject)
+    # db.session.commit()
+    # db.session.add(new_subject2)
+    # db.session.commit()
+    # subject = Subject.query.filter_by(title='PHP').first()
+    # classe = Class.query.filter_by(title='B1').first()
+    # new_proposition = Proposition(title='Besoin d\'aide en PHP', subject=subject,
+    #                               date_butoir=(datetime.now(pytz.timezone('Europe/Paris')) + timedelta(weeks=1)),
+    #                               classe=classe)
+    # db.session.add(new_proposition)
+    # db.session.commit()
+    # proposition = Proposition.query.filter_by(id=1).first()
+    # owner = User.query.filter_by(email="mathis.gauthier@epsi.fr").first()
+    #
+    # course = Course(title="Cours PHP", description="Révision PHP",
+    #                 date_start=(datetime.now(pytz.timezone('Europe/Paris')) + timedelta(days=1)), classe=classe,
+    #                 subject=subject, owner=owner)
+    # db.session.add(course)
+    # db.session.commit()
+    return Response(status=200)
 
 
+# @app.errorhandler(CSRFError)
+# def handle_csrf_error(e):
+#     return jsonify({
+#         'error': e.description,
+#     }), 401
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
+
+
+# Endpoint to give csrf-token before 'POST', 'PUT', 'PATCH', 'DELETE' methods, to avoid CSRF attacks
 @app.route("/csrf-token/", methods=["GET"])
 def home():
-    csrf_token = generate_csrf(secret_key=app.config['WTF_CSRF_SECRET_KEY'], token_key=app.config['TOKEN_KEY'])
+    csrf_token = generate_csrf(secret_key=app.config['WTF_CSRF_SECRET_KEY'])
     return jsonify({
         'X-CSRF-Token': csrf_token
     })
@@ -29,9 +68,7 @@ def test():
         return jsonify({
             'status': 'invalid token'
         }), 401
-    return jsonify({
-        'status': 'OK'
-    }), 200
+    return Response(status=200)
 
 
 # Endpoint to get a list of all users
@@ -55,7 +92,7 @@ def register():
                         email=data['email'], password=password, created_on=datetime.now(pytz.timezone('Europe/Paris')))
         db.session.add(new_user)
         db.session.commit()
-        return jsonify(new_user), 201
+        return Response(status=201)
     else:
         return jsonify({
             'error': 'Email already exists'
@@ -78,7 +115,7 @@ def login():
             app.config['SECRET_KEY'], algorithm="HS256")
         return jsonify({
             'token': token
-        })
+        }), 200
     return jsonify({
         'error': 'Wrong email or password'
     }), 401
