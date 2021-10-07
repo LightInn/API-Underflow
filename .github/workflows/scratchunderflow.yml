@@ -1,0 +1,56 @@
+name: CI/CD Python
+
+on:
+  push:
+    branches: [ cicd ]
+  pull_request:
+    branches: [ cicd ]
+
+jobs:
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+  deploy1:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Copy repository contents via scp
+        uses: appleboy/scp-action@master
+        env:
+          HOST: ${{ secrets.REMOTE_HOST1 }}
+          USERNAME: ${{ secrets.REMOTE_USER }}
+          PORT: 22
+          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        with:
+          source: "."
+          target: .
+
+      - name: Executing remote command
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST1 }}
+          USERNAME: ${{ secrets.REMOTE_USER }}
+          PORT: 22
+          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: touch test.txt
+#           script: cd bot && echo DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }} > .env.example && echo OWNER_ID=${{ secrets.OWNER_ID }} >> .env.example && echo URL_EDT="https://api-calendar.calendz.app/v1/" >> .env.example && mv .env.example .env && chmod +x setup.sh && sudo systemctl restart bot.service
