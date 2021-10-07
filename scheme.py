@@ -21,7 +21,8 @@ class Class(db.Model):
 
 @dataclass
 class User(db.Model):
-    id: str
+    id: UUIDType(binary=False)
+    alternative_id: UUIDType(binary=False)
     first_name: str
     last_name: str
     email: str
@@ -32,13 +33,15 @@ class User(db.Model):
     classe: Class
 
     id = db.Column(UUIDType(binary=False), primary_key=True)
+    alternative_id = db.Column(UUIDType(binary=False), unique=True, nullable=False)
     first_name = db.Column(db.String(80), unique=False, nullable=False)
     last_name = db.Column(db.String(80), unique=False, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), unique=False, nullable=False)
     activated = db.Column(db.Boolean, unique=False, nullable=False, default=False)
     admin = db.Column(db.Boolean, unique=False, nullable=False, default=False)
-    created_on = db.Column(db.DateTime, unique=False, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
+    created_on = db.Column(db.DateTime, unique=False, nullable=False,
+                           default=datetime.now(pytz.timezone('Europe/Paris')))
     last_login = db.Column(db.DateTime, unique=False, nullable=True)
 
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=True)
@@ -133,11 +136,11 @@ class CourseSubscription(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     confirmed = db.Column(db.Boolean, default=False, nullable=False)
 
-    participant_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    participant = db.relationship('User', backref=db.backref('course_participation', lazy='dynamic'))
+    participant_id = db.Column(UUIDType(binary=False), db.ForeignKey('user.id'), nullable=False)
+    participant = db.relationship('User', backref=db.backref('course_participant', lazy='dynamic'))
 
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
-    course = db.relationship('Course', backref=db.backref('participant', lazy='dynamic'))
+    course = db.relationship('Course', backref=db.backref('course', lazy='dynamic'))
 
 
 @dataclass
