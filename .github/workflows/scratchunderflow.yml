@@ -43,7 +43,7 @@ jobs:
           KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         with:
           source: "."
-          target: .
+          target: "/var/www/api_underflow/"
 
       - name: Executing remote command
         uses: appleboy/ssh-action@master
@@ -68,7 +68,7 @@ jobs:
           KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         with:
           source: "."
-          target: .
+          target: "/var/www/api_underflow/"
 
       - name: Executing remote command
         uses: appleboy/ssh-action@master
