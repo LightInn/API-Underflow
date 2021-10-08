@@ -1,12 +1,9 @@
-import uuid
 from datetime import datetime
 from dataclasses import dataclass
 import bcrypt
 import pytz
 from sqlalchemy import DECIMAL
-
-from conf import db
-from sqlalchemy.dialects.postgresql import UUID
+from conf import *
 from sqlalchemy_utils import UUIDType
 
 
@@ -21,8 +18,8 @@ class Class(db.Model):
 
 @dataclass
 class User(db.Model):
-    id: UUIDType(binary=False)
-    alternative_id: UUIDType(binary=False)
+    # id: UUIDType(binary=False)
+    # alternative_id: UUIDType(binary=False)
     first_name: str
     last_name: str
     email: str

@@ -1,22 +1,24 @@
+import os
+from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 
+load_dotenv()
 app = Flask(__name__)
 csrf = CSRFProtect()
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://dbuser:dbpassd@82.65.232.137:5432/scratchunderflow'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///../API-Underflow/aaa.db'
-app.config['DEBUG'] = True
-app.config['SECRET_KEY'] = 'fc036e4bc6974f92bb6577ae886ae113'
-app.config['WTF_CSRF_SECRET_KEY'] = 'csrf_secret_key'
-app.config['WTF_CSRF_FIELD_NAME'] = 'X-CSRFToken'
-# TODO trouver une solution pour SecureCookieSession (envie de jump)
-app.config['WTF_CSRF_CHECK_DEFAULT'] = False
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['REMEMBER_COOKIE_SECURE'] = True
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
+app.config['DEBUG'] = os.getenv('DEBUG')
+app.config['ENV'] = os.getenv('ENV')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('WTF_CSRF_SECRET_KEY')
+app.config['WTF_CSRF_FIELD_NAME'] = os.getenv('WTF_CSRF_FIELD_NAME')
+app.config['WTF_CSRF_CHECK_DEFAULT'] = os.getenv('WTF_CSRF_CHECK_DEFAULT')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = os.getenv('SQLALCHEMY_TRACK_MODIFICATIONS')
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE')
+app.config['REMEMBER_COOKIE_SECURE'] = os.getenv('REMEMBER_COOKIE_SECURE')
 
 CORS(app)
 csrf.init_app(app)

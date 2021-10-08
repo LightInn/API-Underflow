@@ -254,12 +254,12 @@ def class_students(class_id):
 
 
 # Endpoint to get the profil of specific user
-@app.route("/user/<string:user_id>/profile/")
-def user(user_id):
+@app.route("/user/profile/", methods=['GET'])
+def get_user_profile():
     auth = verify_authentication(request.headers)
-    if auth and str(auth.alternative_id) == user_id:
-        # do something
-        return Response(status=200)
+    if auth:
+        user = User.query.filter_by(alternative_id=auth.alternative_id).first()
+        return jsonify(user), 200
     else:
         return jsonify({
             'status': 'invalid token'
@@ -267,12 +267,12 @@ def user(user_id):
 
 
 # Endpoint to get all comments of specific user
-@app.route("/user/<user_id>/comments/")
-def user_comments(user_id):
+@app.route("/user/comments/", methods=['GET'])
+def user_comments():
     auth = verify_authentication(request.headers)
-    if auth and str(auth.alternative_id) == user_id:
-        # do something
-        return Response(status=200)
+    if auth:
+        comments = Comment.query.filter_by(owner=auth).all()
+        return jsonify(comments), 200
     else:
         return jsonify({
             'status': 'invalid token'
