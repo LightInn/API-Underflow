@@ -67,7 +67,6 @@ jobs:
           PORT: 22
           KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         with:
-          rm: true
           overwrite: true
           debug: true
           source: "."
