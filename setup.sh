@@ -1,3 +1,4 @@
+
 #!/bin/bash
 apt -y update
 if [[ $? -ne 0 ]] ; then
@@ -35,8 +36,19 @@ if [[ $? -ne 0 ]] ; then
     exit $?
 fi
 
+echo "SQLALCHEMY_DATABASE_URI = postgresql://scratchunderflow:WcVfe2C]Ku-s><e9,.@localhost:5432/scratchunderflow" > .env
+echo "DEBUG = False" >> .env
+echo "ENV = Production" >> .env
+echo "SECRET_KEY = 'fc036e4bc6974f92bb6577ae886ae113'" >> .env
+echo "WTF_CSRF_SECRET_KEY = 'csrf_secret_keyXXX'" >> .env
+echo "WTF_CSRF_FIELD_NAME = 'X-CSRFToken'" >> .env
+echo "WTF_CSRF_CHECK_DEFAULT = False" >> .env
+echo "SQLALCHEMY_TRACK_MODIFICATIONS = True" >> .env
+echo "SESSION_COOKIE_SECURE = True" >> .env
+echo "REMEMBER_COOKIE_SECURE = True" >> .env
+
 python3 main.py
 if [[ $? -ne 0 ]] ; then
-    echo "Fail start bot, code: $?"
+    echo "Fail start API, code: $?"
     exit $?
 fi
