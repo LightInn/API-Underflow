@@ -3,11 +3,11 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from flask_wtf.csrf import CSRFProtect
+# from flask_wtf.csrf import CSRFProtect
 
 load_dotenv()
 app = Flask(__name__)
-csrf = CSRFProtect()
+# csrf = CSRFProtect()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
 app.config['DEBUG'] = os.getenv('DEBUG')
@@ -21,5 +21,5 @@ app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE')
 app.config['REMEMBER_COOKIE_SECURE'] = os.getenv('REMEMBER_COOKIE_SECURE')
 
 CORS(app)
-csrf.init_app(app)
+# csrf.init_app(app)
 db = SQLAlchemy(app)

@@ -46,11 +46,11 @@ def populate():
     return Response(status=200)
 
 
-@app.errorhandler(CSRFError)
-def handle_csrf_error(e):
-    return jsonify({
-        'error': e.description,
-    }), 401
+# @app.errorhandler(CSRFError)
+# def handle_csrf_error(e):
+#     return jsonify({
+#         'error': e.description,
+#     }), 401
 
 
 # Endpoint to give csrf-token before 'POST', 'PUT', 'PATCH', 'DELETE' methods, to avoid CSRF attacks
@@ -193,11 +193,14 @@ def add_proposal():
 
 
 # Endpoint to get a list of all the participants from a course
-@app.route("/api/course/<course_id>/participants/")
+@app.route("/course/<course_id>/participants/")
 def course_participants(course_id):
     auth = verify_authentication(request.headers)
     if auth:
-        # do something
+
+        participants = User.query.filter(CourseSubscription.participant).filter_by(ended=False).all()
+
+        participants = User.query.filter_by()
         return Response(status=200)
     else:
         return jsonify({
@@ -219,12 +222,14 @@ def threads():
 # Endpoint to get a list of all comments from a thread
 @app.route("/thread/<thread_id>/comments/")
 def thread_comments(thread_id):
-    if not verify_authentication(request.headers):
+    auth = verify_authentication(request.headers)
+    if auth:
+        # do something
+        return jsonify(), 200
+    else:
         return jsonify({
             'status': 'invalid token'
         }), 401
-
-    return "comments"
 
 
 # Endpoint to get a list of all classes
@@ -232,8 +237,8 @@ def thread_comments(thread_id):
 def classes():
     auth = verify_authentication(request.headers)
     if auth:
-        # do something
-        return Response(status=200)
+        classes = Class.query.all()
+        return jsonify(classes), 200
     else:
         return jsonify({
             'status': 'invalid token'
@@ -241,7 +246,7 @@ def classes():
 
 
 # Endpoint to get a list of all students from a class
-@app.route("/class/<class_id>/students")
+@app.route("/class/<int:class_id>/students/")
 def class_students(class_id):
     auth = verify_authentication(request.headers)
     if auth:
@@ -280,12 +285,32 @@ def user_comments():
 
 
 # Endpoint to get all subscriptions of a specific user
-@app.route("/user/<string:user_id>/subscriptions/", methods=['GET'])
-def user_subscriptions(user_id):
+@app.route("/user/subscriptions/", methods=['GET'])
+def user_subscriptions():
     auth = verify_authentication(request.headers)
-    if auth and str(auth.alternative_id) == user_id:
+    if auth:
         subscriptions = Course.query.filter(CourseSubscription.participant == auth).filter_by(ended=False).all()
         return jsonify(subscriptions)
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to subscribe or unsubscribe to a course depend on previous subscription or not
+@app.route("/subscription/", methods=['POST'])
+def subscribe():
+    auth = verify_authentication(request.headers)
+    if auth:
+        data = request.get_json()
+        subscription = CourseSubscription.query.filter_by(course_id=data.course_id, participant_id=auth.id).first()
+        if subscription:
+            db.session.delete(subscription)
+            db.session.commit()
+        else:
+            new_subscription = CourseSubscription(participant=auth, course=data.course_id)
+            db.session.add(new_subscription)
+            db.session.commit()
     else:
         return jsonify({
             'status': 'invalid token'

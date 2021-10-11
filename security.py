@@ -3,7 +3,7 @@ from datetime import timedelta
 import jwt
 from flask import jsonify, request, make_response
 from flask_wtf.csrf import CSRFError, generate_csrf, validate_csrf
-from conf import app, csrf, db
+from conf import app, db
 import pytz
 from scheme import User
 
