@@ -102,6 +102,7 @@ class Course(db.Model):
     date_start: datetime
     duration: DECIMAL(2, 1)
     ended: bool
+    room: str
     classe: Class
     subject: Subject
     owner: User
@@ -112,6 +113,7 @@ class Course(db.Model):
     date_start = db.Column(db.DateTime, nullable=False)
     duration = db.Column(DECIMAL(2, 1), nullable=True)
     ended = db.Column(db.Boolean, nullable=False, default=False)
+    room = db.Column(db.String(20), unique=False, nullable=True)
 
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
     classe = db.relationship('Class', backref=db.backref('courses', lazy='dynamic'))
@@ -126,12 +128,12 @@ class Course(db.Model):
 @dataclass
 class CourseSubscription(db.Model):
     id: int
-    confirmed: bool
+    present: bool
     participant: User
     course: Course
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    confirmed = db.Column(db.Boolean, default=False, nullable=False)
+    present = db.Column(db.Boolean, default=True, nullable=False)
 
     participant_id = db.Column(UUIDType(binary=False), db.ForeignKey('user.id'), nullable=False)
     participant = db.relationship('User', backref=db.backref('course_participant', lazy='dynamic'))
@@ -147,10 +149,10 @@ class Thread(db.Model):
     owner: User
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    title = db.Column(db.Boolean, default=False, nullable=False)
+    title = db.Column(db.String(80), unique=False, nullable=False)
 
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    owner = db.relationship('User', backref=db.backref('threads', lazy='dynamic'))
+    owner_id = db.Column(UUIDType(binary=False), db.ForeignKey('user.id'), nullable=False)
+    owner = db.relationship('User', backref=db.backref('thread_owner', lazy='dynamic'))
 
 
 @dataclass
@@ -162,10 +164,10 @@ class Comment(db.Model):
     thread: Thread
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    text = db.Column(db.Boolean, default=False, nullable=False)
+    text = db.Column(db.String(2000), nullable=False)
     created_on = db.Column(db.DateTime, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
 
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    owner_id = db.Column(UUIDType(binary=False), db.ForeignKey('user.id'), nullable=False)
     owner = db.relationship('User', backref=db.backref('comments', lazy='dynamic'))
 
     parent_comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)
@@ -178,16 +180,20 @@ class Comment(db.Model):
 @dataclass
 class CommentVote(db.Model):
     id: int
-    vote: int
+    vote: bool
     created_on: datetime
     comment: Comment
+    votant: User
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    vote = db.Column(db.Boolean, unique=False, nullable=False)
+    vote = db.Column(db.Boolean, unique=False, nullable=True)
     created_on = db.Column(db.DateTime, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
 
     comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
     comment = db.relationship('Comment', backref=db.backref('votes', lazy='dynamic'))
+
+    votant_id = db.Column(UUIDType(binary=False), db.ForeignKey('user.id'), nullable=False)
+    votant = db.relationship('User', backref=db.backref('votant', lazy='dynamic'))
 
 
 @dataclass
