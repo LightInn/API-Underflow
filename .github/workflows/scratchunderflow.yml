@@ -79,5 +79,5 @@ jobs:
           USERNAME: ${{ secrets.REMOTE_USER }}
           PORT: 22
           KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: chmod +x /var/www/api_underflow/setup.sh && sudo /var/www/api_underflow/setup.sh
+          script: sudo systemctl restart api-scratchunderflow
 #           script: cd bot && echo DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }} > .env.example && echo OWNER_ID=${{ secrets.OWNER_ID }} >> .env.example && echo URL_EDT="https://api-calendar.calendz.app/v1/" >> .env.example && mv .env.example .env && chmod +x setup.sh && sudo systemctl restart bot.service
