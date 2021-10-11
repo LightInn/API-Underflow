@@ -10,7 +10,6 @@ app = Flask(__name__)
 # csrf = CSRFProtect()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
-app.config['DEBUG'] = os.getenv('DEBUG')
 app.config['ENV'] = os.getenv('ENV')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('WTF_CSRF_SECRET_KEY')
