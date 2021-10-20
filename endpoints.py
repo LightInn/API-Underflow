@@ -89,8 +89,8 @@ def register():
     check_user = User.query.filter_by(email=data['email']).first()
     if check_user is None:
         password = str.encode(data['password'])
-        new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name=data['firstname'],
-                        last_name=data['lastname'],
+        new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name=data['first_name'],
+                        last_name=data['last_name'],
                         email=data['email'], password=password, created_on=datetime.now(pytz.timezone('Europe/Paris')))
         db.session.add(new_user)
         db.session.commit()
