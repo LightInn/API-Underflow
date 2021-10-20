@@ -1,6 +1,7 @@
 from scheme import *
 from security import *
 from flask import request, Response
+import re
 
 
 @app.route("/populate/", methods=["GET"])
@@ -86,19 +87,21 @@ def users():
 @app.route("/register/", methods=['POST'])
 def register():
     data = request.get_json()
-    check_user = User.query.filter_by(email=data['email']).first()
-    if check_user is None:
-        password = str.encode(data['password'])
-        new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name=data['first_name'],
-                        last_name=data['last_name'],
-                        email=data['email'], password=password, created_on=datetime.now(pytz.timezone('Europe/Paris')))
-        db.session.add(new_user)
-        db.session.commit()
-        return Response(status=201)
-    else:
-        return jsonify({
-            'error': 'Email already exists'
-        }), 418
+    if re.search(r"@((epsi.fr)|(ecoles-wis.net))$", data['email']):
+        check_user = User.query.filter_by(email=data['email']).first()
+        if check_user is None:
+            password = str.encode(data['password'])
+            new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name=data['first_name'],
+                            last_name=data['last_name'],
+                            email=data['email'], password=password,
+                            created_on=datetime.now(pytz.timezone('Europe/Paris')))
+            db.session.add(new_user)
+            db.session.commit()
+            return Response(status=201)
+
+    return jsonify({
+        'error': 'Invalid email'
+    }), 418
 
 
 @app.route("/login/", methods=["POST"])
@@ -118,7 +121,7 @@ def login():
     }), 401
 
 
-# todo endpoint pour l'ajout d'une matière
+# Endpoint to add a new subject.
 @app.route("/subject/", methods=["POST"])
 def add_subject():
     auth = verify_authentication(request.headers)
@@ -134,15 +137,27 @@ def add_subject():
         }), 401
 
 
+# Endpoint to get a list of all subjects.
+@app.route("/subjects/", methods=["GET"])
+def get_subjects():
+    auth = verify_authentication(request.headers)
+    if auth:
+        subjects = Subject.query.all()
+        return jsonify(subjects), 200
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to logout an user, by changing his alternative_id to invalidate every JWT.
 @app.route("/logout/", methods=["POST"])
 def logout():
     auth = verify_authentication(request.headers)
     if auth:
         auth.alternative_id = uuid.uuid4()
         db.session.commit()
-        return Response(status=200)
-    else:
-        return Response(status=200)
+    return Response(status=200)
 
 
 # Endpoint to get a list of all courses
@@ -199,7 +214,6 @@ def course_participants(course_id):
     if auth:
 
         participants = User.query.filter(CourseSubscription.participant).filter_by(ended=False).all()
-
         participants = User.query.filter_by()
         return Response(status=200)
     else:
