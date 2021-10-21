@@ -1,6 +1,7 @@
 from scheme import *
 from security import *
 from flask import request, Response
+import re
 
 
 @app.route("/populate/", methods=["GET"])
@@ -16,31 +17,34 @@ def populate():
     # db.session.commit()
     # db.session.add(new_class2)
     # db.session.commit()
-    # owner = User.query.filter_by(email='mathis.gauthier@epsi.fr').first()
+    owner = User.query.filter_by(email='mathis.gauthier@epsi.fr').first()
     # new_subject = Subject(title='PHP', validated=True, proposePar=owner)
     # new_subject2 = Subject(title='JS', validated=True, proposePar=owner)
     # db.session.add(new_subject)
     # db.session.commit()
     # db.session.add(new_subject2)
     # db.session.commit()
-    # subject = Subject.query.filter_by(title='PHP').first()
-    # subject2 = Subject.query.filter_by(title='JS').first()
-    # classe = Class.query.filter_by(title='B1').first()
+    subject = Subject.query.filter_by(title='PHP').first()
+    subject2 = Subject.query.filter_by(title='JS').first()
+    classe = Class.query.filter_by(title='B1').first()
     # new_proposition = Proposition(title='Besoin d\'aide en PHP', subject=subject,
     #                               date_butoir=(datetime.now(pytz.timezone('Europe/Paris')) + timedelta(weeks=1)),
     #                               classe=classe, owner=owner)
     # db.session.add(new_proposition)
     # db.session.commit()
-    # proposition = Proposition.query.filter_by(id=1).first()
-    # owner = User.query.filter_by(email="mathis.gauthier@epsi.fr").first()
-    #
+    new_proposition = Proposition(title='Besoin d\'aide en JS', subject=subject2,
+                                  date_butoir=(datetime.now(pytz.timezone('Europe/Paris')) + timedelta(weeks=1)),
+                                  classe=classe, owner=owner)
+    db.session.add(new_proposition)
+    db.session.commit()
+    proposition = Proposition.query.filter_by(id=1).first()
     # course = Course(title="Cours JS", description="Révision JS",
     #                 date_start=(datetime.now(pytz.timezone('Europe/Paris')) + timedelta(days=1)), classe=classe,
     #                 subject=subject2, owner=owner)
     # db.session.add(course)
     # db.session.commit()
-    # cours = Course.query.filter_by(id=2).first()
-    # subscription = CourseSubscription(confirmed=True, participant=owner, course=cours)
+    cours = Course.query.filter_by(id=1).first()
+    # subscription = CourseSubscription(participant=owner, course=cours)
     # db.session.add(subscription)
     # db.session.commit()
     return Response(status=200)
@@ -86,19 +90,21 @@ def users():
 @app.route("/register/", methods=['POST'])
 def register():
     data = request.get_json()
-    check_user = User.query.filter_by(email=data['email']).first()
-    if check_user is None:
-        password = str.encode(data['password'])
-        new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name=data['firstname'],
-                        last_name=data['lastname'],
-                        email=data['email'], password=password, created_on=datetime.now(pytz.timezone('Europe/Paris')))
-        db.session.add(new_user)
-        db.session.commit()
-        return Response(status=201)
-    else:
-        return jsonify({
-            'error': 'Email already exists'
-        }), 418
+    if re.search(r"@((epsi.fr)|(ecoles-wis.net))$", data['email']):
+        check_user = User.query.filter_by(email=data['email']).first()
+        if check_user is None:
+            password = str.encode(data['password'])
+            new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name=data['first_name'],
+                            last_name=data['last_name'],
+                            email=data['email'], password=password,
+                            created_on=datetime.now(pytz.timezone('Europe/Paris')))
+            db.session.add(new_user)
+            db.session.commit()
+            return Response(status=201)
+
+    return jsonify({
+        'error': 'Invalid email'
+    }), 418
 
 
 @app.route("/login/", methods=["POST"])
@@ -118,7 +124,7 @@ def login():
     }), 401
 
 
-# todo endpoint pour l'ajout d'une matière
+# Endpoint to add a new subject.
 @app.route("/subject/", methods=["POST"])
 def add_subject():
     auth = verify_authentication(request.headers)
@@ -134,15 +140,27 @@ def add_subject():
         }), 401
 
 
+# Endpoint to get a list of all subjects.
+@app.route("/subjects/", methods=["GET"])
+def get_subjects():
+    auth = verify_authentication(request.headers)
+    if auth:
+        subjects = Subject.query.all()
+        return jsonify(subjects), 200
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to logout an user, by changing his alternative_id to invalidate every JWT.
 @app.route("/logout/", methods=["POST"])
 def logout():
     auth = verify_authentication(request.headers)
     if auth:
         auth.alternative_id = uuid.uuid4()
         db.session.commit()
-        return Response(status=200)
-    else:
-        return Response(status=200)
+    return Response(status=200)
 
 
 # Endpoint to get a list of all courses
@@ -158,33 +176,38 @@ def courses():
         }), 401
 
 
-# Endpoint to get a list of all proposals of courses
-@app.route("/proposals/", methods=["GET"])
-def get_proposals():
+# Endpoint to get a list of all propositions of courses
+@app.route("/propositions/", methods=["GET"])
+def get_propositions():
     auth = verify_authentication(request.headers)
     if auth:
-        # do something
-        return Response(status=200)
+        # TODO sélectionner que les champs utiles (Proposition.id, Proposition.title, Proposition.date_butoir,
+        #  Proposition.subject.id, Proposition.subject.title, Proposition.classe.id, Proposition.classe.title)
+        propositions = Proposition.query.all()
+        return jsonify(propositions), 200
     else:
         return jsonify({
             'status': 'invalid token'
         }), 401
 
 
-@app.route("/proposal/", methods=["POST"])
-def add_proposal():
+@app.route("/proposition/", methods=["POST"])
+def add_proposition():
     auth = verify_authentication(request.headers)
     if auth:
-        # data = request.get_json()
-        # check_subject = Subject.query.filter_by(id=data.subject.id).first()
-        # if not check_subject:
-        #     new_subject = Subject(title=data.subject.title, proposePar=auth)
-        #     db.session.add(new_subject)
-        #     db.session.commit()
-        #     subject = Subject.query.filter_by(title=data.subject.title).first()
-        #     data
-        # classe = Class.query.filter_by(id=data.classe.id).first()
-        # new_proposal = Proposition(title=data.title, date_butoir=data.date_butoir, classe=classe, owner=auth, subject=)
+        data = request.get_json()
+        check_subject = Subject.query.filter_by(id=data.subject.id).first()
+        if not check_subject:
+            new_subject = Subject(title=data.subject.title, proposePar=auth)
+            db.session.add(new_subject)
+            db.session.commit()
+            subject = Subject.query.filter_by(title=data.subject.title).first()
+            data.subject = subject
+        classe = Class.query.filter_by(id=data.classe.id).first()
+        new_proposal = Proposition(title=data.title, date_butoir=data.date_butoir, classe=classe, owner=auth,
+                                   subject=data.subject)
+        db.session.add(new_proposal)
+        db.session.commit()
         return Response(status=201)
     else:
         return jsonify({
@@ -199,7 +222,6 @@ def course_participants(course_id):
     if auth:
 
         participants = User.query.filter(CourseSubscription.participant).filter_by(ended=False).all()
-
         participants = User.query.filter_by()
         return Response(status=200)
     else:
