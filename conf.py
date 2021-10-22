@@ -19,7 +19,7 @@ app.config['SESSION_COOKIE_SECURE'] = False
 app.config['REMEMBER_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = False
 app.config['WTF_CSRF_SSL_STRICT'] = False
-app.config['SESSION_COOKIE_DOMAIN'] = "dev.localhost"
+app.config['SESSION_COOKIE_DOMAIN'] = ".dev.localhost"
 
 csrf = CSRFProtect(app)
 CORS(app, allow_headers="*", expose_headers="*", supports_credentials=True)
