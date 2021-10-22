@@ -18,7 +18,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = os.getenv('SQLALCHEMY_TRACK_MODIF
 app.config['SESSION_COOKIE_SECURE'] = False
 app.config['REMEMBER_COOKIE_SECURE'] = True
 app.config['WTF_CSRF_SSL_STRICT'] = False
-app.config['SESSION_COOKIE_DOMAIN'] = ".scratchunderflow.fr"
+app.config['SESSION_COOKIE_DOMAIN'] = ""
 
 csrf = CSRFProtect(app)
 CORS(app, allow_headers="*", expose_headers="*", supports_credentials=True)
