@@ -1,3 +1,5 @@
+from sqlalchemy.orm import session
+
 from scheme import *
 from security import *
 from flask import request, Response
@@ -181,9 +183,11 @@ def courses():
 def get_propositions():
     auth = verify_authentication(request.headers)
     if auth:
-        # TODO sélectionner que les champs utiles (Proposition.id, Proposition.title, Proposition.date_butoir,
-        #  Proposition.subject.id, Proposition.subject.title, Proposition.classe.id, Proposition.classe.title)
         propositions = Proposition.query.all()
+        print(propositions)
+        for proposition in propositions:
+            delattr(proposition.subject, 'proposePar')
+            delattr(proposition, 'owner')
         return jsonify(propositions), 200
     else:
         return jsonify({
