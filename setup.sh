@@ -44,9 +44,11 @@ echo "WTF_CSRF_SECRET_KEY = 'csrf_secret_keyXXX'" >> .env
 echo "WTF_CSRF_FIELD_NAME = 'X-CSRFToken'" >> .env
 echo "WTF_CSRF_CHECK_DEFAULT = False" >> .env
 echo "SQLALCHEMY_TRACK_MODIFICATIONS = True" >> .env
-echo "SESSION_COOKIE_SECURE = True" >> .env
+echo "SESSION_COOKIE_SECURE = False" >> .env
 echo "REMEMBER_COOKIE_SECURE = True" >> .env
 echo "PORT = 8009" >> .env
+echo "SESSION_COOKIE_DOMAIN = .scratchunderflow.fr" >> .env
+echo "WTF_CSRF_SSL_STRICT = False" >> .env
 
 python3 main.py
 if [[ $? -ne 0 ]] ; then

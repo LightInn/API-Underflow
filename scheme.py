@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import bcrypt
 import pytz
 from sqlalchemy import DECIMAL
+
 from conf import *
 from sqlalchemy_utils import UUIDType
 import dotenv
