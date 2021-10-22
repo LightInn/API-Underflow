@@ -17,8 +17,9 @@ app.config['WTF_CSRF_CHECK_DEFAULT'] = os.getenv('WTF_CSRF_CHECK_DEFAULT')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = os.getenv('SQLALCHEMY_TRACK_MODIFICATIONS')
 app.config['SESSION_COOKIE_SECURE'] = False
 app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = False
 app.config['WTF_CSRF_SSL_STRICT'] = False
-app.config['SESSION_COOKIE_DOMAIN'] = ""
+app.config['SESSION_COOKIE_DOMAIN'] = "localhost"
 
 csrf = CSRFProtect(app)
 CORS(app, allow_headers="*", expose_headers="*", supports_credentials=True)
