@@ -38,7 +38,6 @@ def validation_jwt(token_unverified):
 	return True
 
 
-
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
 	return jsonify({
@@ -48,14 +47,17 @@ def handle_csrf_error(e):
 
 @app.before_request
 def check_csrf():
-    print('csrf protect')
-    test = request.cookies
-    csrf.protect()
-#
-#
-# @app.after_request
-# def set_xsrf_cookie(response):
-#     print('after_request')
-#     # response.set_cookie('X-CSRFToken',
-#     #                     generate_csrf(secret_key=app.config['WTF_CSRF_SECRET_KEY'], token_key=app.config['TOKEN_KEY']))
-#     return response
+	csrf.protect()
+
+
+@app.after_request
+def handle_cookies(response):
+	# Add CORS header to every response
+	response.headers["Access-Control-Allow-Origin"] = "*"
+	response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS,HEAD"
+	response.headers[
+		"Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Authorization, set-cookies, " \
+	                                      "X-CSRFToken ,Set-Cookie, cookie"
+	response.headers["Access-Control-Allow-Credentials"] = True
+	response.headers["Access-Control-Allow-Credentials"] = True
+	return response
