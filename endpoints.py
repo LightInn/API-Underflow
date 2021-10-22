@@ -1,3 +1,5 @@
+from time import sleep
+
 from sqlalchemy.orm import session
 
 from scheme import *
@@ -103,7 +105,6 @@ def register():
             db.session.add(new_user)
             db.session.commit()
             return Response(status=201)
-
     return jsonify({
         'error': 'Invalid email'
     }), 418
@@ -183,12 +184,12 @@ def courses():
 def get_propositions():
     auth = verify_authentication(request.headers)
     if auth:
-        propositions = Proposition.query.all()
-        print(propositions)
-        for proposition in propositions:
-            delattr(proposition.subject, 'proposePar')
-            delattr(proposition, 'owner')
-        return jsonify(propositions), 200
+        with db.session.no_autoflush:
+            propositions = Proposition.query.all()
+            for proposition in propositions:
+                delattr(proposition.subject, 'proposePar')
+                delattr(proposition, 'owner')
+            return jsonify(propositions), 200
     else:
         return jsonify({
             'status': 'invalid token'

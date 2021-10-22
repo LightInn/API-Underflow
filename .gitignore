@@ -4,3 +4,4 @@ __pycache__/
 venv/
 mydata.json
 aaa.db
+test.db
