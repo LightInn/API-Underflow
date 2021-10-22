@@ -316,8 +316,16 @@ def user_comments():
 def user_subscriptions():
     auth = verify_authentication(request.headers)
     if auth:
-        subscriptions = Course.query.filter(CourseSubscription.participant == auth).filter_by(ended=False).all()
-        return jsonify(subscriptions)
+        with db.session.no_autoflush:
+            courses = Course.query.filter(CourseSubscription.participant == auth).filter_by(ended=False).all()
+            for course in courses:
+                delattr(course.owner, 'email')
+                delattr(course.owner, 'admin')
+                delattr(course.owner, 'activated')
+                delattr(course.owner, 'last_login')
+                delattr(course.owner, 'created_on')
+                delattr(course.subject, 'proposePar')
+            return jsonify(courses)
     else:
         return jsonify({
             'status': 'invalid token'
