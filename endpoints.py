@@ -1,7 +1,3 @@
-from time import sleep
-
-from sqlalchemy.orm import session
-
 from scheme import *
 from security import *
 from flask import request, Response
@@ -98,8 +94,8 @@ def register():
         check_user = User.query.filter_by(email=data['email']).first()
         if check_user is None:
             password = str.encode(data['password'])
-            new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name=data['first_name'],
-                            last_name=data['last_name'],
+            new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name=data['first_name'].capitalize(),
+                            last_name=data['last_name'].upper(),
                             email=data['email'], password=password,
                             created_on=datetime.now(pytz.timezone('Europe/Paris')))
             db.session.add(new_user)
@@ -201,16 +197,17 @@ def add_proposition():
     auth = verify_authentication(request.headers)
     if auth:
         data = request.get_json()
-        check_subject = Subject.query.filter_by(id=data.subject.id).first()
+        check_subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
         if not check_subject:
-            new_subject = Subject(title=data.subject.title, proposePar=auth)
+            new_subject = Subject(title=data['subject']['title'], proposePar=auth)
             db.session.add(new_subject)
             db.session.commit()
-            subject = Subject.query.filter_by(title=data.subject.title).first()
-            data.subject = subject
-        classe = Class.query.filter_by(id=data.classe.id).first()
-        new_proposal = Proposition(title=data.title, date_butoir=data.date_butoir, classe=classe, owner=auth,
-                                   subject=data.subject)
+            check_subject = Subject.query.filter_by(title=data['subject']['title']).first()
+        classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
+        new_proposal = Proposition(title=data['title'],
+                                   date_butoir=datetime.strptime(data['date_butoir'], '%Y-%m-%dT%H:%M'),
+                                   classe=classe, owner=auth,
+                                   subject=check_subject)
         db.session.add(new_proposal)
         db.session.commit()
         return Response(status=201)
