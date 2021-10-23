@@ -243,14 +243,13 @@ def add_proposition():
 
 
 # Endpoint to get a list of all the participants from a course
-@app.route("/course/<course_id>/participants/")
+@app.route("/course/<int:course_id>/participants/", methods=['GET'])
 def course_participants(course_id):
     auth = verify_authentication(request.headers)
     if auth:
-
         participants = User.query.filter(CourseSubscription.participant).filter_by(ended=False).all()
-        participants = User.query.filter_by()
-        return Response(status=200)
+
+        return jsonify(participants), 200
     else:
         return jsonify({
             'status': 'invalid token'
@@ -361,13 +360,13 @@ def subscribe():
     if auth:
         subscribed: bool
         data = request.get_json()
-        subscription = CourseSubscription.query.filter_by(course_id=data['course_id'], participant=auth).first()
+        subscription = CourseSubscription.query.filter_by(course_id=data['id'], participant=auth).first()
         if subscription:
             db.session.delete(subscription)
             db.session.commit()
             subscribed = False
         else:
-            course = Course.query.filter_by(id=data['course_id']).first()
+            course = Course.query.filter_by(id=data['id']).first()
             new_subscription = CourseSubscription(participant=auth, course=course)
             db.session.add(new_subscription)
             db.session.commit()
