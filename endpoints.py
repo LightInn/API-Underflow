@@ -352,7 +352,7 @@ def user_subscriptions():
                     delattr(course.owner, 'created_on')
                 if course.subject.proposePar:
                     delattr(course.subject, 'proposePar')
-            return jsonify(courses)
+            return jsonify(courses), 200
     else:
         return jsonify({
             'status': 'invalid token'
