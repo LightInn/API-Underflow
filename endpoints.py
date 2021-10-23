@@ -338,7 +338,8 @@ def user_subscriptions():
     auth = verify_authentication(request.headers)
     if auth:
         with db.session.no_autoflush:
-            courses = Course.query.filter(CourseSubscription.participant == auth).filter_by(ended=False).all()
+            courses = Course.query.filter_by(ended=False).filter(CourseSubscription.participant_id == auth.id).join(
+                CourseSubscription).all()
             for course in courses:
                 if course.owner.email:
                     delattr(course.owner, 'email')
@@ -385,7 +386,26 @@ def subscribe():
             'status': 'invalid token'
         }), 401
 
+
 # ============================
 # ENDPOINT ADMIN
 # ============================
-# Endpoint update classe
+# Endpoint to delete user
+@app.route("/admin/delete_user/", methods=['DELETE'])
+def delete_user():
+    auth = verify_authentication(request.headers)
+    if auth:
+        if verify_admin_auth(auth):
+            data = request.get_json()
+            user_to_delete = User.query.filter_by(id=data['id'])
+            db.session.delete(user_to_delete)
+            db.session.commit()
+            return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
