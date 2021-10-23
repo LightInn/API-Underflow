@@ -367,15 +367,19 @@ def subscribe():
             db.session.commit()
             subscribed = False
         else:
-            new_subscription = CourseSubscription(participant=auth, course=data['course_id'])
+            course = Course.query.filter_by(id=data['course_id']).first()
+            new_subscription = CourseSubscription(participant=auth, course=course)
             db.session.add(new_subscription)
             db.session.commit()
             subscribed = True
-        return jsonify(subscribed), 200
+        return jsonify({
+            'subscribed': subscribed
+        }), 200
     else:
         return jsonify({
             'status': 'invalid token'
         }), 401
+
 
 # ============================
 # ENDPOINT ADMIN
