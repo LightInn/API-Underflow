@@ -340,12 +340,18 @@ def user_subscriptions():
         with db.session.no_autoflush:
             courses = Course.query.filter(CourseSubscription.participant == auth).filter_by(ended=False).all()
             for course in courses:
-                delattr(course.owner, 'email')
-                delattr(course.owner, 'admin')
-                delattr(course.owner, 'activated')
-                delattr(course.owner, 'last_login')
-                delattr(course.owner, 'created_on')
-                delattr(course.subject, 'proposePar')
+                if course.owner.email:
+                    delattr(course.owner, 'email')
+                if course.owner.admin:
+                    delattr(course.owner, 'admin')
+                if course.owner.activated:
+                    delattr(course.owner, 'activated')
+                if course.owner.last_login:
+                    delattr(course.owner, 'last_login')
+                if course.owner.created_on:
+                    delattr(course.owner, 'created_on')
+                if course.subject.proposePar:
+                    delattr(course.subject, 'proposePar')
             return jsonify(courses)
     else:
         return jsonify({
@@ -378,7 +384,6 @@ def subscribe():
         return jsonify({
             'status': 'invalid token'
         }), 401
-
 
 # ============================
 # ENDPOINT ADMIN
