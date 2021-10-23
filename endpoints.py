@@ -163,12 +163,37 @@ def logout():
 
 
 # Endpoint to get a list of all courses
-@app.route("/courses/")
+@app.route("/courses/", methods=['GET'])
 def courses():
     auth = verify_authentication(request.headers)
     if auth:
         courses = Course.query.filter_by(ended=False).all()
         return jsonify(courses), 200
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to create a new Course
+@app.route("/course/", methods=['POST'])
+def add_course():
+    auth = verify_authentication(request.headers)
+    if auth:
+        data = request.get_json()
+        check_subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
+        if not check_subject:
+            new_subject = Subject(title=data['subject']['title'], proposePar=auth)
+            db.session.add(new_subject)
+            db.session.commit()
+            check_subject = Subject.query.filter_by(title=data['subject']['title']).first()
+        classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
+        new_course = Course(title=data['title'], classe=classe,
+                            date_start=datetime.strptime(data['date_start'], '%Y-%m-%dT%H:%M'),
+                            description=data['description'], owner=auth, room=data['room'], subject=check_subject)
+        db.session.add(new_course)
+        db.session.commit()
+        return Response(status=201)
     else:
         return jsonify({
             'status': 'invalid token'
@@ -334,16 +359,25 @@ def user_subscriptions():
 def subscribe():
     auth = verify_authentication(request.headers)
     if auth:
+        subscribed: bool
         data = request.get_json()
-        subscription = CourseSubscription.query.filter_by(course_id=data.course_id, participant_id=auth.id).first()
+        subscription = CourseSubscription.query.filter_by(course_id=data['course_id'], participant=auth).first()
         if subscription:
             db.session.delete(subscription)
             db.session.commit()
+            subscribed = False
         else:
-            new_subscription = CourseSubscription(participant=auth, course=data.course_id)
+            new_subscription = CourseSubscription(participant=auth, course=data['course_id'])
             db.session.add(new_subscription)
             db.session.commit()
+            subscribed = True
+        return jsonify(subscribed), 200
     else:
         return jsonify({
             'status': 'invalid token'
         }), 401
+
+# ============================
+# ENDPOINT ADMIN
+# ============================
+# Endpoint update classe
