@@ -113,7 +113,7 @@ def login():
     if user and user.verify_password(str.encode(data['password'])):
         token = jwt.encode(
             {'id': str(user.alternative_id),
-             'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(minutes=30)},
+             'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(hours=24)},
             app.config['SECRET_KEY'], algorithm="HS256")
         return jsonify({
             'token': token
