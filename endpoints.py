@@ -653,6 +653,10 @@ def delete_course():
         if auth.admin:
             data = request.get_json()
             course = Course.query.filter_by(id=data['id']).first()
+            subscriptions = CourseSubscription.query.filter_by(course=course).all()
+            if subscriptions:
+                db.session.delete(subscriptions)
+                db.session.commit()
             if course:
                 db.session.delete(course)
                 db.session.commit()
