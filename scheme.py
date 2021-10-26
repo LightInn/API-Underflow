@@ -121,10 +121,10 @@ class Course(db.Model):
 	room = db.Column(db.String(20), unique=False, nullable=True)
 
 	class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
-	classe = db.relationship('Class', backref=db.backref('courses', lazy='dynamic'))
+	classe = db.relationship('Class', backref=db.backref('courses_class', lazy='dynamic'))
 
 	subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
-	subject = db.relationship('Subject', backref=db.backref('courses', lazy='dynamic'))
+	subject = db.relationship('Subject', backref=db.backref('courses_subject', lazy='dynamic'))
 
 	owner_id = db.Column(UUIDType(binary=False), db.ForeignKey('user.id'), nullable=False)
 	owner = db.relationship('User', backref=db.backref('courses_owner', lazy='dynamic'))

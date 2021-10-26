@@ -1,3 +1,6 @@
+from sqlalchemy.orm import Session
+
+from scheme import *
 from security import *
 from scheme import *
 from flask import request, Response, session
@@ -72,17 +75,6 @@ def test():
 	return Response(status=200)
 
 
-# Endpoint to get a list of all users
-@app.route("/users/", methods=['GET'])
-def users():
-	if not verify_authentication(request.headers):
-		return jsonify({
-			'status': 'invalid token'
-		}), 401
-	users = User.query.all()
-	return jsonify(users)
-
-
 @app.route("/register/", methods=['POST'])
 def register():
 	data = request.get_json()
@@ -90,14 +82,13 @@ def register():
 		check_user = User.query.filter_by(email=data['email']).first()
 		if check_user is None:
 			password = str.encode(data['password'])
-			new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name=data['first_name'],
-			                last_name=data['last_name'],
+			new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name=data['first_name'].capitalize(),
+			                last_name=data['last_name'].upper(),
 			                email=data['email'], password=password,
 			                created_on=datetime.now(pytz.timezone('Europe/Paris')))
 			db.session.add(new_user)
 			db.session.commit()
 			return Response(status=201)
-
 	return jsonify({
 		'error': 'Invalid email'
 	}), 418
@@ -109,8 +100,8 @@ def login():
 	user = User.query.filter_by(email=data['email']).first()
 	if user and user.verify_password(str.encode(data['password'])):
 		token = jwt.encode(
-			{'id': str(user.alternative_id),
-			 'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(minutes=30)},
+			{'id': str(user.alternative_id), 'admin': user.admin,
+			 'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(hours=24)},
 			app.config['SECRET_KEY'], algorithm="HS256")
 		return jsonify({
 			'token': token
@@ -160,12 +151,78 @@ def logout():
 
 
 # Endpoint to get a list of all courses
-@app.route("/courses/")
-def courses():
+@app.route("/courses/", methods=['GET'])
+def get_courses():
 	auth = verify_authentication(request.headers)
 	if auth:
-		courses = Course.query.filter_by(ended=False).all()
-		return jsonify(courses), 200
+		with db.session.no_autoflush:
+			courses = Course.query.filter_by(ended=False).all()
+			for course in courses:
+				if course.owner.email:
+					delattr(course.owner, 'email')
+				if course.owner.admin:
+					delattr(course.owner, 'admin')
+				if course.owner.activated:
+					delattr(course.owner, 'activated')
+				if course.owner.last_login:
+					delattr(course.owner, 'last_login')
+				if course.owner.created_on:
+					delattr(course.owner, 'created_on')
+				if course.subject.proposePar:
+					delattr(course.subject, 'proposePar')
+			return jsonify(courses), 200
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to get a list of all courses of current logged user
+@app.route("/user/courses/", methods=['GET'])
+def get_owner_courses():
+	auth = verify_authentication(request.headers)
+	if auth:
+		with db.session.no_autoflush:
+			courses = Course.query.filter_by(ended=False, owner=auth).all()
+			for course in courses:
+				if course.owner.email:
+					delattr(course.owner, 'email')
+				if course.owner.admin:
+					delattr(course.owner, 'admin')
+				if course.owner.activated:
+					delattr(course.owner, 'activated')
+				if course.owner.last_login:
+					delattr(course.owner, 'last_login')
+				if course.owner.created_on:
+					delattr(course.owner, 'created_on')
+				if course.subject.proposePar:
+					delattr(course.subject, 'proposePar')
+			return jsonify(courses), 200
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to create a new Course
+@app.route("/course/", methods=['POST'])
+def add_course():
+	auth = verify_authentication(request.headers)
+	if auth:
+		data = request.get_json()
+		check_subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
+		if not check_subject:
+			new_subject = Subject(title=data['subject']['title'], proposePar=auth)
+			db.session.add(new_subject)
+			db.session.commit()
+			check_subject = Subject.query.filter_by(title=data['subject']['title']).first()
+		classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
+		new_course = Course(title=data['title'], classe=classe,
+		                    date_start=datetime.strptime(data['date_start'], '%Y-%m-%dT%H:%M'),
+		                    description=data['description'], owner=auth, room=data['room'], subject=check_subject)
+		db.session.add(new_course)
+		db.session.commit()
+		return Response(status=201)
 	else:
 		return jsonify({
 			'status': 'invalid token'
@@ -177,10 +234,14 @@ def courses():
 def get_propositions():
 	auth = verify_authentication(request.headers)
 	if auth:
-		# TODO sélectionner que les champs utiles (Proposition.id, Proposition.title, Proposition.date_butoir,
-		#  Proposition.subject.id, Proposition.subject.title, Proposition.classe.id, Proposition.classe.title)
-		propositions = Proposition.query.all()
-		return jsonify(propositions), 200
+		with db.session.no_autoflush:
+			propositions = Proposition.query.all()
+			for proposition in propositions:
+				if proposition.subject.proposePar:
+					delattr(proposition.subject, 'proposePar')
+				if proposition.owner:
+					delattr(proposition, 'owner')
+			return jsonify(propositions), 200
 	else:
 		return jsonify({
 			'status': 'invalid token'
@@ -192,16 +253,17 @@ def add_proposition():
 	auth = verify_authentication(request.headers)
 	if auth:
 		data = request.get_json()
-		check_subject = Subject.query.filter_by(id=data.subject.id).first()
+		check_subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
 		if not check_subject:
-			new_subject = Subject(title=data.subject.title, proposePar=auth)
+			new_subject = Subject(title=data['subject']['title'], proposePar=auth)
 			db.session.add(new_subject)
 			db.session.commit()
-			subject = Subject.query.filter_by(title=data.subject.title).first()
-			data.subject = subject
-		classe = Class.query.filter_by(id=data.classe.id).first()
-		new_proposal = Proposition(title=data.title, date_butoir=data.date_butoir, classe=classe, owner=auth,
-		                           subject=data.subject)
+			check_subject = Subject.query.filter_by(title=data['subject']['title']).first()
+		classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
+		new_proposal = Proposition(title=data['title'],
+		                           date_butoir=datetime.strptime(data['date_butoir'], '%Y-%m-%dT%H:%M'),
+		                           classe=classe, owner=auth,
+		                           subject=check_subject)
 		db.session.add(new_proposal)
 		db.session.commit()
 		return Response(status=201)
@@ -212,14 +274,13 @@ def add_proposition():
 
 
 # Endpoint to get a list of all the participants from a course
-@app.route("/course/<course_id>/participants/")
+@app.route("/course/<int:course_id>/participants/", methods=['GET'])
 def course_participants(course_id):
 	auth = verify_authentication(request.headers)
 	if auth:
-
 		participants = User.query.filter(CourseSubscription.participant).filter_by(ended=False).all()
-		participants = User.query.filter_by()
-		return Response(status=200)
+
+		return jsonify(participants), 200
 	else:
 		return jsonify({
 			'status': 'invalid token'
@@ -227,8 +288,8 @@ def course_participants(course_id):
 
 
 # Endpoint to get a list of all threads
-@app.route("/threads/")
-def threads():
+@app.route("/threads/", methods=['GET'])
+def get_threads():
 	if not verify_authentication(request.headers):
 		return jsonify({
 			'status': 'invalid token'
@@ -238,8 +299,8 @@ def threads():
 
 
 # Endpoint to get a list of all comments from a thread
-@app.route("/thread/<thread_id>/comments/")
-def thread_comments(thread_id):
+@app.route("/thread/<thread_id>/comments/", methods=['GET'])
+def get_thread_comments(thread_id):
 	auth = verify_authentication(request.headers)
 	if auth:
 		# do something
@@ -251,8 +312,8 @@ def thread_comments(thread_id):
 
 
 # Endpoint to get a list of all classes
-@app.route("/classes/")
-def classes():
+@app.route("/classes/", methods=['GET'])
+def get_classes():
 	auth = verify_authentication(request.headers)
 	if auth:
 		classes = Class.query.all()
@@ -307,8 +368,23 @@ def user_comments():
 def user_subscriptions():
 	auth = verify_authentication(request.headers)
 	if auth:
-		subscriptions = Course.query.filter(CourseSubscription.participant == auth).filter_by(ended=False).all()
-		return jsonify(subscriptions)
+		with db.session.no_autoflush:
+			courses = Course.query.filter_by(ended=False).filter(CourseSubscription.participant_id == auth.id).join(
+				CourseSubscription).all()
+			for course in courses:
+				if course.owner.email:
+					delattr(course.owner, 'email')
+				if course.owner.admin:
+					delattr(course.owner, 'admin')
+				if course.owner.activated:
+					delattr(course.owner, 'activated')
+				if course.owner.last_login:
+					delattr(course.owner, 'last_login')
+				if course.owner.created_on:
+					delattr(course.owner, 'created_on')
+				if course.subject.proposePar:
+					delattr(course.subject, 'proposePar')
+			return jsonify(courses), 200
 	else:
 		return jsonify({
 			'status': 'invalid token'
@@ -320,15 +396,248 @@ def user_subscriptions():
 def subscribe():
 	auth = verify_authentication(request.headers)
 	if auth:
+		subscribed: bool
 		data = request.get_json()
-		subscription = CourseSubscription.query.filter_by(course_id=data.course_id, participant_id=auth.id).first()
+		subscription = CourseSubscription.query.filter_by(course_id=data['id'], participant=auth).first()
 		if subscription:
 			db.session.delete(subscription)
 			db.session.commit()
+			subscribed = False
 		else:
-			new_subscription = CourseSubscription(participant=auth, course=data.course_id)
+			course = Course.query.filter_by(id=data['id']).first()
+			new_subscription = CourseSubscription(participant=auth, course=course)
 			db.session.add(new_subscription)
 			db.session.commit()
+			subscribed = True
+		return jsonify({
+			'subscribed': subscribed
+		}), 200
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# ============================
+# ENDPOINT ADMIN
+# ============================
+# Endpoint to add a classe
+@app.route("/admin/classe/", methods=["POST"])
+def add_classe():
+	auth = verify_authentication(request.headers)
+	if auth:
+		if auth.admin:
+			data = request.get_json()
+			classe = Class(title=data["title"])
+			db.session.add(classe)
+			db.session.commit()
+			return Response(status=200)
+		else:
+			return jsonify({
+				'status': 'Forbidden'
+			}), 403
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to get a list of all users
+@app.route("/admin/users/", methods=['GET'])
+def get_users():
+	auth = verify_authentication(request.headers)
+	if auth:
+		if auth.admin:
+			users = User.query.all()
+			return jsonify(users), 200
+		else:
+			return jsonify({
+				'status': 'Forbidden'
+			}), 403
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to delete user
+@app.route("/admin/delete_user/", methods=['DELETE'])
+def delete_user():
+	auth = verify_authentication(request.headers)
+	if auth:
+		if auth.admin:
+			data = request.get_json()
+			user_to_delete = User.query.filter_by(id=data['id'])
+			db.session.delete(user_to_delete)
+			db.session.commit()
+			return Response(status=200)
+		else:
+			return jsonify({
+				'status': 'Forbidden'
+			}), 403
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to update a subject
+@app.route("/admin/update_subject/", methods=['PATCH'])
+def update_subject():
+	auth = verify_authentication(request.headers)
+	if auth:
+		if auth.admin:
+			data = request.get_json()
+			subject = Subject.query.filter_by(id=data['id']).first()
+			if subject:
+				subject.title = data['title']
+				db.session.add(subject)
+				db.session.commit()
+				return Response(status=200)
+			return Response(status=400)
+		else:
+			return jsonify({
+				'status': 'Forbidden'
+			}), 403
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to delete a subject
+@app.route("/admin/delete_subject/", methods=['DELETE'])
+def delete_subject():
+	auth = verify_authentication(request.headers)
+	if auth:
+		if auth.admin:
+			data = request.get_json()
+			subject = Subject.query.filter_by(id=data['id']).first()
+			db.session.delete(subject)
+			db.session.commit()
+			return Response(status=200)
+		else:
+			return jsonify({
+				'status': 'Forbidden'
+			}), 403
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to update a classe
+@app.route("/admin/update_classe/", methods=['PATCH'])
+def update_classe():
+	auth = verify_authentication(request.headers)
+	if auth:
+		if auth.admin:
+			data = request.get_json()
+			classe = Class.query.filter_by(id=data['id']).first()
+			if classe:
+				classe.title = data['title']
+				db.session.add(classe)
+				db.session.commit()
+				return Response(status=200)
+			return Response(status=400)
+		else:
+			return jsonify({
+				'status': 'Forbidden'
+			}), 403
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to delete a proposition
+@app.route("/admin/delete_proposition/", methods=['DELETE'])
+def delete_proposition():
+	auth = verify_authentication(request.headers)
+	if auth:
+		if auth.admin:
+			data = request.get_json()
+			proposition = Proposition.query.filter_by(id=data['id']).first()
+			db.session.delete(proposition)
+			db.session.commit()
+			return Response(status=200)
+		else:
+			return jsonify({
+				'status': 'Forbidden'
+			}), 403
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to delete a classe
+@app.route("/admin/delete_classe/", methods=['DELETE'])
+def delete_classe():
+	auth = verify_authentication(request.headers)
+	if auth:
+		if auth.admin:
+			data = request.get_json()
+			classe = Class.query.filter_by(id=data['id']).first()
+			db.session.delete(classe)
+			db.session.commit()
+			return Response(status=200)
+		else:
+			return jsonify({
+				'status': 'Forbidden'
+			}), 403
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to update a course by
+@app.route("/admin/update_course/", methods=['PATCH'])
+def update_course():
+	auth = verify_authentication(request.headers)
+	if auth:
+		if auth.admin:
+			data = request.get_json()
+			course = Course.query.filter_by(id=data['id']).first()
+			if course:
+				course.subject_id = data['subject_id']
+				course.description = data['description']
+				course.title = data['title']
+				course.date_start = datetime.strptime(data['date_start'], '%Y-%m-%dT%H:%M')
+				course.ended = data['ended']
+				course.duration = data['duration']
+				course.owner_id = data['owner_id']
+				course.class_id = data['class_id']
+				db.session.add(course)
+				db.session.commit()
+				return Response(status=200)
+			return Response(status=400)
+		else:
+			return jsonify({
+				'status': 'Forbidden'
+			}), 403
+	else:
+		return jsonify({
+			'status': 'invalid token'
+		}), 401
+
+
+# Endpoint to delete a course
+@app.route("/admin/delete_course", methods=['DELETE'])
+def delete_course():
+	auth = verify_authentication(request.headers)
+	if auth:
+		if auth.admin:
+			data = request.get_json()
+			course = Course.query.filter_by(id=data['id']).first()
+			db.session.delete(course)
+			db.session.commit()
+			return Response(status=200)
+		else:
+			return jsonify({
+				'status': 'Forbidden'
+			}), 403
 	else:
 		return jsonify({
 			'status': 'invalid token'

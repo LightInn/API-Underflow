@@ -22,7 +22,6 @@ def verify_authentication(headers):
 	return None
 
 
-# todo à faire
 def logout_user(headers):
 	token = headers.get('Authorization')[7:]
 	id_to_change = (jwt.decode(token, key=app.config['SECRET_KEY'], algorithms='HS256'))['id']
