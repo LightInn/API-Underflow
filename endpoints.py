@@ -646,7 +646,7 @@ def update_course():
 
 
 # Endpoint to delete a course
-@app.route("/admin/delete_course", methods=['DELETE'])
+@app.route("/admin/delete_course/", methods=['DELETE'])
 def delete_course():
     auth = verify_authentication(request.headers)
     if auth:
