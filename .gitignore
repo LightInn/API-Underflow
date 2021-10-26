@@ -5,3 +5,4 @@ venv/
 mydata.json
 aaa.db
 test.db
+aaa.db-journal

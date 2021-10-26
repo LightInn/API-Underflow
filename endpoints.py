@@ -1,3 +1,5 @@
+from sqlalchemy.orm import Session
+
 from scheme import *
 from security import *
 from flask import request, Response
@@ -157,6 +159,19 @@ def courses():
     auth = verify_authentication(request.headers)
     if auth:
         courses = Course.query.filter_by(ended=False).all()
+        return jsonify(courses), 200
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to get a list of all courses of current logged user
+@app.route("/user/courses/", methods=['GET'])
+def get_owner_courses():
+    auth = verify_authentication(request.headers)
+    if auth:
+        courses = Course.query.filter_by(ended=False, owner=auth).all()
         return jsonify(courses), 200
     else:
         return jsonify({
@@ -442,17 +457,19 @@ def delete_user():
 
 
 # Endpoint to update a subject
-@app.route("/admin/update_subject/", methods=['UPDATE'])
+@app.route("/admin/update_subject/", methods=['PATCH'])
 def update_subject():
     auth = verify_authentication(request.headers)
     if auth:
         if verify_admin_auth(auth):
             data = request.get_json()
             subject = Subject.query.filter_by(id=data['id']).first()
-            subject.title = data['title']
-            db.session.update(subject)
-            db.session.commit()
-            return Response(status=200)
+            if subject:
+                subject.title = data['title']
+                db.session.add(subject)
+                db.session.commit()
+                return Response(status=200)
+            return Response(status=400)
         else:
             return jsonify({
                 'status': 'Forbidden'
@@ -485,17 +502,19 @@ def delete_subject():
 
 
 # Endpoint to update a classe
-@app.route("/admin/update_classe/", methods=['POST'])
+@app.route("/admin/update_classe/", methods=['PATCH'])
 def update_classe():
     auth = verify_authentication(request.headers)
     if auth:
         if verify_admin_auth(auth):
             data = request.get_json()
             classe = Class.query.filter_by(id=data['id']).first()
-            classe.title = data['title']
-            db.session.update(classe)
-            db.session.commit()
-            return Response(status=200)
+            if classe:
+                classe.title = data['title']
+                db.session.add(classe)
+                db.session.commit()
+                return Response(status=200)
+            return Response(status=400)
         else:
             return jsonify({
                 'status': 'Forbidden'
@@ -538,6 +557,37 @@ def delete_classe():
             db.session.delete(classe)
             db.session.commit()
             return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to update a course by
+@app.route("/admin/update_course/", methods=['PATCH'])
+def update_course():
+    auth = verify_authentication(request.headers)
+    if auth:
+        if verify_admin_auth(auth):
+            data = request.get_json()
+            course = Course.query.filter_by(id=data['id']).first()
+            if course:
+                course.subject_id = data['subject_id']
+                course.description = data['description']
+                course.title = data['title']
+                course.date_start = datetime.strptime(data['date_start'], '%Y-%m-%dT%H:%M')
+                course.ended = data['ended']
+                course.duration = data['duration']
+                course.owner_id = data['owner_id']
+                course.class_id = data['class_id']
+                db.session.add(course)
+                db.session.commit()
+                return Response(status=200)
+            return Response(status=400)
         else:
             return jsonify({
                 'status': 'Forbidden'
