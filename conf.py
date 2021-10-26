@@ -1,4 +1,6 @@
 import os
+from datetime import timedelta
+
 from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
@@ -17,10 +19,16 @@ app.config['WTF_CSRF_CHECK_DEFAULT'] = os.getenv('WTF_CSRF_CHECK_DEFAULT')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = os.getenv('SQLALCHEMY_TRACK_MODIFICATIONS')
 app.config['SESSION_COOKIE_SECURE'] = False
 app.config['REMEMBER_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = False
 app.config['WTF_CSRF_SSL_STRICT'] = False
-app.config['SESSION_COOKIE_DOMAIN'] = ".scratchunderflow.fr"
+# app.config['SESSION_COOKIE_DOMAIN'] = "localhost.local"
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+app.config['SESSION_COOKIE_SAMESITE'] = "None"
 
-csrf = CSRFProtect(app)
-CORS(app, allow_headers="*", expose_headers="*", supports_credentials=True)
+CSRF = False
+
+csrf = None
+if CSRF:
+	csrf = CSRFProtect(app)
+CORS(app)
 db = SQLAlchemy(app)

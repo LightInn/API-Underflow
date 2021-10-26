@@ -47,17 +47,24 @@ def handle_csrf_error(e):
 
 @app.before_request
 def check_csrf():
-	csrf.protect()
+	if False:
+		session.permanent = False
+		csrf.protect()
+
+
+
 
 
 @app.after_request
 def handle_cookies(response):
-	# Add CORS header to every response
-	response.headers["Access-Control-Allow-Origin"] = "*"
-	response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS,HEAD"
-	response.headers[
-		"Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Authorization, set-cookies, " \
-	                                      "X-CSRFToken ,Set-Cookie, cookie"
-	response.headers["Access-Control-Allow-Credentials"] = True
-	response.headers["Access-Control-Allow-Credentials"] = True
+	# resp = make_response("Session granted")
+	# Set session cookie for a day
+	# resp.set_cookie('test', 'SESSION_KEY', max_age=60 * 60 * 24, domain='localhost.local')
+	# # Add CORS header to every response
+	# response.headers["Access-Control-Allow-Origin"] = "*"
+	# response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS,HEAD"
+	# response.headers[
+	# 	"Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Authorization, set-cookies, " \
+	#                                       "X-CSRFToken ,Set-Cookie, cookie"
+	# response.headers["Access-Control-Allow-Credentials"] = True
 	return response
