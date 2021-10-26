@@ -1,3 +1,4 @@
+import os
 import uuid
 from datetime import timedelta
 import jwt
@@ -47,7 +48,7 @@ def handle_csrf_error(e):
 
 @app.before_request
 def check_csrf():
-	if False:
+	if os.getenv('ENABLE_CSRF'):
 		session.permanent = False
 		csrf.protect()
 
