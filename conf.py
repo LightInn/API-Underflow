@@ -27,6 +27,6 @@ app.config['SESSION_COOKIE_SAMESITE'] = os.getenv('SESSION_COOKIE_SAMESITE')
 
 csrf = None
 if bool(strtobool(os.getenv('ENABLE_CSRF'))):
-	csrf = CSRFProtect(app)
+    csrf = CSRFProtect(app)
 CORS(app)
 db = SQLAlchemy(app)
