@@ -655,8 +655,9 @@ def delete_course():
             course = Course.query.filter_by(id=data['id']).first()
             subscriptions = CourseSubscription.query.filter_by(course=course).all()
             if subscriptions:
-                db.session.delete(subscriptions)
-                db.session.commit()
+                for subscription in subscriptions:
+                    db.session.delete(subscription)
+                    db.session.commit()
             if course:
                 db.session.delete(course)
                 db.session.commit()
