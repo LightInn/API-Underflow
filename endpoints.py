@@ -155,11 +155,25 @@ def logout():
 
 # Endpoint to get a list of all courses
 @app.route("/courses/", methods=['GET'])
-def courses():
+def get_courses():
     auth = verify_authentication(request.headers)
     if auth:
-        courses = Course.query.filter_by(ended=False).all()
-        return jsonify(courses), 200
+        with db.session.no_autoflush:
+            courses = Course.query.filter_by(ended=False).all()
+            for course in courses:
+                if course.owner.email:
+                    delattr(course.owner, 'email')
+                if course.owner.admin:
+                    delattr(course.owner, 'admin')
+                if course.owner.activated:
+                    delattr(course.owner, 'activated')
+                if course.owner.last_login:
+                    delattr(course.owner, 'last_login')
+                if course.owner.created_on:
+                    delattr(course.owner, 'created_on')
+                if course.subject.proposePar:
+                    delattr(course.subject, 'proposePar')
+            return jsonify(courses), 200
     else:
         return jsonify({
             'status': 'invalid token'
@@ -171,8 +185,22 @@ def courses():
 def get_owner_courses():
     auth = verify_authentication(request.headers)
     if auth:
-        courses = Course.query.filter_by(ended=False, owner=auth).all()
-        return jsonify(courses), 200
+        with db.session.no_autoflush:
+            courses = Course.query.filter_by(ended=False, owner=auth).all()
+            for course in courses:
+                if course.owner.email:
+                    delattr(course.owner, 'email')
+                if course.owner.admin:
+                    delattr(course.owner, 'admin')
+                if course.owner.activated:
+                    delattr(course.owner, 'activated')
+                if course.owner.last_login:
+                    delattr(course.owner, 'last_login')
+                if course.owner.created_on:
+                    delattr(course.owner, 'created_on')
+                if course.subject.proposePar:
+                    delattr(course.subject, 'proposePar')
+            return jsonify(courses), 200
     else:
         return jsonify({
             'status': 'invalid token'
@@ -401,7 +429,7 @@ def subscribe():
 def add_classe():
     auth = verify_authentication(request.headers)
     if auth:
-        if verify_admin_auth(auth):
+        if auth.admin:
             data = request.get_json()
             classe = Class(title=data["title"])
             db.session.add(classe)
@@ -422,7 +450,7 @@ def add_classe():
 def get_users():
     auth = verify_authentication(request.headers)
     if auth:
-        if verify_admin_auth(auth):
+        if auth.admin:
             users = User.query.all()
             return jsonify(users), 200
         else:
@@ -440,7 +468,7 @@ def get_users():
 def delete_user():
     auth = verify_authentication(request.headers)
     if auth:
-        if verify_admin_auth(auth):
+        if auth.admin:
             data = request.get_json()
             user_to_delete = User.query.filter_by(id=data['id'])
             db.session.delete(user_to_delete)
@@ -461,7 +489,7 @@ def delete_user():
 def update_subject():
     auth = verify_authentication(request.headers)
     if auth:
-        if verify_admin_auth(auth):
+        if auth.admin:
             data = request.get_json()
             subject = Subject.query.filter_by(id=data['id']).first()
             if subject:
@@ -485,7 +513,7 @@ def update_subject():
 def delete_subject():
     auth = verify_authentication(request.headers)
     if auth:
-        if verify_admin_auth(auth):
+        if auth.admin:
             data = request.get_json()
             subject = Subject.query.filter_by(id=data['id']).first()
             db.session.delete(subject)
@@ -506,7 +534,7 @@ def delete_subject():
 def update_classe():
     auth = verify_authentication(request.headers)
     if auth:
-        if verify_admin_auth(auth):
+        if auth.admin:
             data = request.get_json()
             classe = Class.query.filter_by(id=data['id']).first()
             if classe:
@@ -530,7 +558,7 @@ def update_classe():
 def delete_proposition():
     auth = verify_authentication(request.headers)
     if auth:
-        if verify_admin_auth(auth):
+        if auth.admin:
             data = request.get_json()
             proposition = Proposition.query.filter_by(id=data['id']).first()
             db.session.delete(proposition)
@@ -551,7 +579,7 @@ def delete_proposition():
 def delete_classe():
     auth = verify_authentication(request.headers)
     if auth:
-        if verify_admin_auth(auth):
+        if auth.admin:
             data = request.get_json()
             classe = Class.query.filter_by(id=data['id']).first()
             db.session.delete(classe)
@@ -572,7 +600,7 @@ def delete_classe():
 def update_course():
     auth = verify_authentication(request.headers)
     if auth:
-        if verify_admin_auth(auth):
+        if auth.admin:
             data = request.get_json()
             course = Course.query.filter_by(id=data['id']).first()
             if course:
@@ -603,7 +631,7 @@ def update_course():
 def delete_course():
     auth = verify_authentication(request.headers)
     if auth:
-        if verify_admin_auth(auth):
+        if auth.admin:
             data = request.get_json()
             course = Course.query.filter_by(id=data['id']).first()
             db.session.delete(course)

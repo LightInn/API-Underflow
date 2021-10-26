@@ -19,12 +19,6 @@ def verify_authentication(headers):
     return None
 
 
-def verify_admin_auth(auth):
-    if auth.admin:
-        return True
-    return False
-
-
 def logout_user(headers):
     token = headers.get('Authorization')[7:]
     id_to_change = (jwt.decode(token, key=app.config['SECRET_KEY'], algorithms='HS256'))['id']
