@@ -149,7 +149,8 @@ def logout():
     if auth:
         auth.alternative_id = uuid.uuid4()
         db.session.commit()
-    return Response(status=200)
+        return Response(status=200)
+    return Response(status=418)
 
 
 # Endpoint to get a list of all courses
@@ -162,9 +163,9 @@ def get_courses():
             for course in courses:
                 if course.owner.email:
                     delattr(course.owner, 'email')
-                if course.owner.admin:
+                if course.owner.admin or course.owner.admin is not None:
                     delattr(course.owner, 'admin')
-                if course.owner.activated:
+                if course.owner.activated or course.owner.activated is not None:
                     delattr(course.owner, 'activated')
                 if course.owner.last_login:
                     delattr(course.owner, 'last_login')
@@ -189,9 +190,9 @@ def get_owner_courses():
             for course in courses:
                 if course.owner.email:
                     delattr(course.owner, 'email')
-                if course.owner.admin:
+                if course.owner.admin or course.owner.admin is not None:
                     delattr(course.owner, 'admin')
-                if course.owner.activated:
+                if course.owner.activated or course.owner.activated is not None:
                     delattr(course.owner, 'activated')
                 if course.owner.last_login:
                     delattr(course.owner, 'last_login')
@@ -280,8 +281,19 @@ def add_proposition():
 def course_participants(course_id):
     auth = verify_authentication(request.headers)
     if auth:
-        participants = User.query.filter(CourseSubscription.participant).filter_by(ended=False).all()
-
+        participants = User.query.filter(CourseSubscription.course_id == course_id).filter(Course.ended == False).join(
+            CourseSubscription).join(Course).all()
+        for participant in participants:
+            if participant.last_login:
+                delattr(participant, 'last_login')
+            if participant.email:
+                delattr(participant, 'email')
+            if participant.created_on:
+                delattr(participant, 'created_on')
+            if participant.activated or participant.activated is not None:
+                delattr(participant, 'activated')
+            if participant.admin or participant.admin is not None:
+                delattr(participant, 'admin')
         return jsonify(participants), 200
     else:
         return jsonify({
@@ -376,9 +388,9 @@ def user_subscriptions():
             for course in courses:
                 if course.owner.email:
                     delattr(course.owner, 'email')
-                if course.owner.admin:
+                if course.owner.admin or course.owner.admin is not None:
                     delattr(course.owner, 'admin')
-                if course.owner.activated:
+                if course.owner.activated or course.owner.activated is not None:
                     delattr(course.owner, 'activated')
                 if course.owner.last_login:
                     delattr(course.owner, 'last_login')
@@ -469,10 +481,12 @@ def delete_user():
     if auth:
         if auth.admin:
             data = request.get_json()
-            user_to_delete = User.query.filter_by(id=data['id'])
-            db.session.delete(user_to_delete)
-            db.session.commit()
-            return Response(status=200)
+            user_to_delete = User.query.filter_by(email=data['email'])
+            if user_to_delete:
+                db.session.delete(user_to_delete)
+                db.session.commit()
+                return Response(status=200)
+            return Response(status=400)
         else:
             return jsonify({
                 'status': 'Forbidden'
@@ -515,9 +529,11 @@ def delete_subject():
         if auth.admin:
             data = request.get_json()
             subject = Subject.query.filter_by(id=data['id']).first()
-            db.session.delete(subject)
-            db.session.commit()
-            return Response(status=200)
+            if subject:
+                db.session.delete(subject)
+                db.session.commit()
+                return Response(status=200)
+            return Response(status=400)
         else:
             return jsonify({
                 'status': 'Forbidden'
@@ -560,9 +576,11 @@ def delete_proposition():
         if auth.admin:
             data = request.get_json()
             proposition = Proposition.query.filter_by(id=data['id']).first()
-            db.session.delete(proposition)
-            db.session.commit()
-            return Response(status=200)
+            if proposition:
+                db.session.delete(proposition)
+                db.session.commit()
+                return Response(status=200)
+            return Response(status=400)
         else:
             return jsonify({
                 'status': 'Forbidden'
@@ -581,9 +599,11 @@ def delete_classe():
         if auth.admin:
             data = request.get_json()
             classe = Class.query.filter_by(id=data['id']).first()
-            db.session.delete(classe)
-            db.session.commit()
-            return Response(status=200)
+            if classe:
+                db.session.delete(classe)
+                db.session.commit()
+                return Response(status=200)
+            return Response(status=400)
         else:
             return jsonify({
                 'status': 'Forbidden'
@@ -633,9 +653,11 @@ def delete_course():
         if auth.admin:
             data = request.get_json()
             course = Course.query.filter_by(id=data['id']).first()
-            db.session.delete(course)
-            db.session.commit()
-            return Response(status=200)
+            if course:
+                db.session.delete(course)
+                db.session.commit()
+                return Response(status=200)
+            return Response(status=400)
         else:
             return jsonify({
                 'status': 'Forbidden'
