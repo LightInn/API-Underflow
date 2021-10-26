@@ -76,17 +76,6 @@ def test():
     return Response(status=200)
 
 
-# Endpoint to get a list of all users
-@app.route("/users/", methods=['GET'])
-def users():
-    if not verify_authentication(request.headers):
-        return jsonify({
-            'status': 'invalid token'
-        }), 401
-    users = User.query.all()
-    return jsonify(users)
-
-
 @app.route("/register/", methods=['POST'])
 def register():
     data = request.get_json()
@@ -208,8 +197,10 @@ def get_propositions():
         with db.session.no_autoflush:
             propositions = Proposition.query.all()
             for proposition in propositions:
-                delattr(proposition.subject, 'proposePar')
-                delattr(proposition, 'owner')
+                if proposition.subject.proposePar:
+                    delattr(proposition.subject, 'proposePar')
+                if proposition.owner:
+                    delattr(proposition, 'owner')
             return jsonify(propositions), 200
     else:
         return jsonify({
@@ -257,8 +248,8 @@ def course_participants(course_id):
 
 
 # Endpoint to get a list of all threads
-@app.route("/threads/")
-def threads():
+@app.route("/threads/", methods=['GET'])
+def get_threads():
     if not verify_authentication(request.headers):
         return jsonify({
             'status': 'invalid token'
@@ -268,8 +259,8 @@ def threads():
 
 
 # Endpoint to get a list of all comments from a thread
-@app.route("/thread/<thread_id>/comments/")
-def thread_comments(thread_id):
+@app.route("/thread/<thread_id>/comments/", methods=['GET'])
+def get_thread_comments(thread_id):
     auth = verify_authentication(request.headers)
     if auth:
         # do something
@@ -281,8 +272,8 @@ def thread_comments(thread_id):
 
 
 # Endpoint to get a list of all classes
-@app.route("/classes/")
-def classes():
+@app.route("/classes/", methods=['GET'])
+def get_classes():
     auth = verify_authentication(request.headers)
     if auth:
         classes = Class.query.all()
@@ -390,6 +381,45 @@ def subscribe():
 # ============================
 # ENDPOINT ADMIN
 # ============================
+# Endpoint to add a classe
+@app.route("/admin/classe/", methods=["POST"])
+def add_classe():
+    auth = verify_authentication(request.headers)
+    if auth:
+        if verify_admin_auth(auth):
+            data = request.get_json()
+            classe = Class(title=data["title"])
+            db.session.add(classe)
+            db.session.commit()
+            return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to get a list of all users
+@app.route("/admin/users/", methods=['GET'])
+def get_users():
+    auth = verify_authentication(request.headers)
+    if auth:
+        if verify_admin_auth(auth):
+            users = User.query.all()
+            return jsonify(users), 200
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
 # Endpoint to delete user
 @app.route("/admin/delete_user/", methods=['DELETE'])
 def delete_user():
@@ -399,6 +429,134 @@ def delete_user():
             data = request.get_json()
             user_to_delete = User.query.filter_by(id=data['id'])
             db.session.delete(user_to_delete)
+            db.session.commit()
+            return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to update a subject
+@app.route("/admin/update_subject/", methods=['UPDATE'])
+def update_subject():
+    auth = verify_authentication(request.headers)
+    if auth:
+        if verify_admin_auth(auth):
+            data = request.get_json()
+            subject = Subject.query.filter_by(id=data['id']).first()
+            subject.title = data['title']
+            db.session.update(subject)
+            db.session.commit()
+            return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to delete a subject
+@app.route("/admin/delete_subject/", methods=['DELETE'])
+def delete_subject():
+    auth = verify_authentication(request.headers)
+    if auth:
+        if verify_admin_auth(auth):
+            data = request.get_json()
+            subject = Subject.query.filter_by(id=data['id']).first()
+            db.session.delete(subject)
+            db.session.commit()
+            return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to update a classe
+@app.route("/admin/update_classe/", methods=['POST'])
+def update_classe():
+    auth = verify_authentication(request.headers)
+    if auth:
+        if verify_admin_auth(auth):
+            data = request.get_json()
+            classe = Class.query.filter_by(id=data['id']).first()
+            classe.title = data['title']
+            db.session.update(classe)
+            db.session.commit()
+            return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to delete a proposition
+@app.route("/admin/delete_proposition/", methods=['DELETE'])
+def delete_proposition():
+    auth = verify_authentication(request.headers)
+    if auth:
+        if verify_admin_auth(auth):
+            data = request.get_json()
+            proposition = Proposition.query.filter_by(id=data['id']).first()
+            db.session.delete(proposition)
+            db.session.commit()
+            return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to delete a classe
+@app.route("/admin/delete_classe/", methods=['DELETE'])
+def delete_classe():
+    auth = verify_authentication(request.headers)
+    if auth:
+        if verify_admin_auth(auth):
+            data = request.get_json()
+            classe = Class.query.filter_by(id=data['id']).first()
+            db.session.delete(classe)
+            db.session.commit()
+            return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to delete a course
+@app.route("/admin/delete_course", methods=['DELETE'])
+def delete_course():
+    auth = verify_authentication(request.headers)
+    if auth:
+        if verify_admin_auth(auth):
+            data = request.get_json()
+            course = Course.query.filter_by(id=data['id']).first()
+            db.session.delete(course)
             db.session.commit()
             return Response(status=200)
         else:
