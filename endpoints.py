@@ -103,7 +103,7 @@ def login():
     user = User.query.filter_by(email=data['email']).first()
     if user and user.verify_password(str.encode(data['password'])):
         token = jwt.encode(
-            {'id': str(user.alternative_id),
+            {'id': str(user.alternative_id), 'admin': user.admin,
              'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(hours=24)},
             app.config['SECRET_KEY'], algorithm="HS256")
         return jsonify({
