@@ -1,8 +1,11 @@
+from distutils.util import strtobool
+
 from sqlalchemy.orm import Session
 
 from scheme import *
 from security import *
-from flask import request, Response
+from scheme import *
+from flask import request, Response, session
 import re
 
 
@@ -52,17 +55,13 @@ def populate():
     return Response(status=200)
 
 
-# @app.errorhandler(CSRFError)
-# def handle_csrf_error(e):
-#     return jsonify({
-#         'error': e.description,
-#     }), 401
-
-
 # Endpoint to give csrf-token before 'POST', 'PUT', 'PATCH', 'DELETE' methods, to avoid CSRF attacks
 @app.route("/csrf-token/", methods=["GET"])
-def home():
-    csrf_token = generate_csrf(secret_key=app.config['WTF_CSRF_SECRET_KEY'])
+def csrf():
+    csrf_token = "None"
+    if bool(strtobool(os.getenv('ENABLE_CSRF'))):
+        csrf_token = generate_csrf(secret_key=app.config['WTF_CSRF_SECRET_KEY'], token_key="csrf_token")
+
     return jsonify({
         'X-CSRF-Token': csrf_token
     })

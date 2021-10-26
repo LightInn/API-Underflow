@@ -3,8 +3,10 @@ from dataclasses import dataclass
 import bcrypt
 import pytz
 from sqlalchemy import DECIMAL
+
 from conf import *
 from sqlalchemy_utils import UUIDType
+import dotenv
 
 
 @dataclass
@@ -53,7 +55,10 @@ class User(db.Model):
         self.password_hash = bcrypt.hashpw(password, bcrypt.gensalt())
 
     def verify_password(self, password):
-        return bcrypt.checkpw(password, self.password_hash)
+        if bool(strtobool(os.getenv('DEBUG'))):
+            return bcrypt.checkpw(password, self.password_hash)
+        else:
+            return bcrypt.checkpw(password, bytes.fromhex(self.password_hash[2:]))
 
 
 @dataclass
