@@ -2,9 +2,9 @@ name: CI/CD Python
 
 on:
   push:
-    branches: [ cicd ]
+    branches: [ master ]
   pull_request:
-    branches: [ cicd ]
+    branches: [ master ]
 
 jobs:
   lint:
@@ -28,7 +28,7 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-  deploy1:
+  deploy_breval:
     needs: lint
     runs-on: ubuntu-latest
     steps:
@@ -37,32 +37,7 @@ jobs:
       - name: Copy repository contents via scp
         uses: appleboy/scp-action@master
         env:
-          HOST: ${{ secrets.REMOTE_HOST1 }}
-          USERNAME: ${{ secrets.REMOTE_USER }}
-          PORT: 22
-          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        with:
-          source: "."
-          target: "/var/www/api_underflow/"
-
-      - name: Executing remote command
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.REMOTE_HOST1 }}
-          USERNAME: ${{ secrets.REMOTE_USER }}
-          PORT: 22
-          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: touch test.txt
-  deploy2:
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-
-      - name: Copy repository contents via scp
-        uses: appleboy/scp-action@master
-        env:
-          HOST: ${{ secrets.REMOTE_HOST2 }}
+          HOST: ${{ secrets.REMOTE_HOST }}
           USERNAME: ${{ secrets.REMOTE_USER }}
           PORT: 22
           KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -75,9 +50,8 @@ jobs:
       - name: Executing remote command
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.REMOTE_HOST2 }}
+          host: ${{ secrets.REMOTE_HOST }}
           USERNAME: ${{ secrets.REMOTE_USER }}
           PORT: 22
           KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: sudo systemctl restart api-scratchunderflow
-#           script: cd bot && echo DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }} > .env.example && echo OWNER_ID=${{ secrets.OWNER_ID }} >> .env.example && echo URL_EDT="https://api-calendar.calendz.app/v1/" >> .env.example && mv .env.example .env && chmod +x setup.sh && sudo systemctl restart bot.service
+          script: cd /var/www/api_underflow/ && echo "${{ secrets.ENV_VARIABLES }}" >> .env && sudo systemctl restart api-scratchunderflow
