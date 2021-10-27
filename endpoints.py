@@ -1,7 +1,5 @@
 from distutils.util import strtobool
-
 from sqlalchemy.orm import Session
-
 from scheme import *
 from security import *
 from scheme import *
@@ -235,6 +233,7 @@ def get_owner_courses():
 
 
 # Endpoint to create a new Course
+# TODO supprimer la proposition à la création du cours
 @app.route("/course/", methods=['POST'])
 def add_course():
     auth = verify_authentication(request.headers)
@@ -253,6 +252,27 @@ def add_course():
         db.session.add(new_course)
         db.session.commit()
         return Response(status=201)
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to end a course
+@app.route("/course/<int:course_id>/cloture/", methods=['POST'])
+def cloture_course(course_id):
+    auth = verify_authentication(request.headers)
+    if auth:
+        course = Course.query.filter_by(id=course_id, ended=False).first()
+        if course and course.owner == auth:
+            course.ended = True
+            db.session.add(course)
+            db.session.commit()
+            return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
     else:
         return jsonify({
             'status': 'invalid token'
@@ -278,6 +298,7 @@ def get_propositions():
         }), 401
 
 
+# Endpoint to add a proposition
 @app.route("/proposition/", methods=["POST"])
 def add_proposition():
     auth = verify_authentication(request.headers)
