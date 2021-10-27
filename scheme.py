@@ -3,8 +3,10 @@ from dataclasses import dataclass
 import bcrypt
 import pytz
 from sqlalchemy import DECIMAL
+
 from conf import *
 from sqlalchemy_utils import UUIDType
+import dotenv
 
 
 @dataclass
@@ -53,7 +55,10 @@ class User(db.Model):
         self.password_hash = bcrypt.hashpw(password, bcrypt.gensalt())
 
     def verify_password(self, password):
-        return bcrypt.checkpw(password, self.password_hash)
+        if bool(strtobool(os.getenv('DEBUG'))):
+            return bcrypt.checkpw(password, self.password_hash)
+        else:
+            return bcrypt.checkpw(password, bytes.fromhex(self.password_hash[2:]))
 
 
 @dataclass
@@ -116,10 +121,10 @@ class Course(db.Model):
     room = db.Column(db.String(20), unique=False, nullable=True)
 
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
-    classe = db.relationship('Class', backref=db.backref('courses', lazy='dynamic'))
+    classe = db.relationship('Class', backref=db.backref('courses_class', lazy='dynamic'))
 
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
-    subject = db.relationship('Subject', backref=db.backref('courses', lazy='dynamic'))
+    subject = db.relationship('Subject', backref=db.backref('courses_subject', lazy='dynamic'))
 
     owner_id = db.Column(UUIDType(binary=False), db.ForeignKey('user.id'), nullable=False)
     owner = db.relationship('User', backref=db.backref('courses_owner', lazy='dynamic'))
