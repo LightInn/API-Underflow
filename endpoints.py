@@ -1,56 +1,7 @@
-from distutils.util import strtobool
-from sqlalchemy.orm import Session
+import re
+from flask import request, Response
 from scheme import *
 from security import *
-from scheme import *
-from flask import request, Response, session
-import re
-
-
-@app.route("/populate/", methods=["GET"])
-def populate():
-    # new_user = User(id=uuid.uuid4(), alternative_id=uuid.uuid4(), first_name='Mathis', last_name='Gauthier',
-    #                 email='mathis.gauthier@epsi.fr',
-    #                 password=str.encode('123456'))
-    # db.session.add(new_user)
-    # db.session.commit()
-    # new_class = Class(title='B1')
-    # new_class2 = Class(title='B2')
-    # db.session.add(new_class)
-    # db.session.commit()
-    # db.session.add(new_class2)
-    # db.session.commit()
-    owner = User.query.filter_by(email='mathis.gauthier@epsi.fr').first()
-    # new_subject = Subject(title='PHP', validated=True, proposePar=owner)
-    # new_subject2 = Subject(title='JS', validated=True, proposePar=owner)
-    # db.session.add(new_subject)
-    # db.session.commit()
-    # db.session.add(new_subject2)
-    # db.session.commit()
-    subject = Subject.query.filter_by(title='PHP').first()
-    subject2 = Subject.query.filter_by(title='JS').first()
-    classe = Class.query.filter_by(title='B1').first()
-    # new_proposition = Proposition(title='Besoin d\'aide en PHP', subject=subject,
-    #                               date_butoir=(datetime.now(pytz.timezone('Europe/Paris')) + timedelta(weeks=1)),
-    #                               classe=classe, owner=owner)
-    # db.session.add(new_proposition)
-    # db.session.commit()
-    new_proposition = Proposition(title='Besoin d\'aide en JS', subject=subject2,
-                                  date_butoir=(datetime.now(pytz.timezone('Europe/Paris')) + timedelta(weeks=1)),
-                                  classe=classe, owner=owner)
-    db.session.add(new_proposition)
-    db.session.commit()
-    proposition = Proposition.query.filter_by(id=1).first()
-    # course = Course(title="Cours JS", description="Révision JS",
-    #                 date_start=(datetime.now(pytz.timezone('Europe/Paris')) + timedelta(days=1)), classe=classe,
-    #                 subject=subject2, owner=owner)
-    # db.session.add(course)
-    # db.session.commit()
-    cours = Course.query.filter_by(id=1).first()
-    # subscription = CourseSubscription(participant=owner, course=cours)
-    # db.session.add(subscription)
-    # db.session.commit()
-    return Response(status=200)
 
 
 # Endpoint to give csrf-token before 'POST', 'PUT', 'PATCH', 'DELETE' methods, to avoid CSRF attacks
@@ -445,7 +396,7 @@ def get_user_profile():
 
 
 # Endpoint to modify the profile of the logged users
-@app.route("/user/profile/edit/", methods=['POST'])
+@app.route("/user/profile/edit/", methods=['PATCH'])
 def edit_user():
     auth = verify_authentication(request.headers)
     if auth:
@@ -457,6 +408,34 @@ def edit_user():
         db.session.add(user)
         db.session.commit()
         return Response(status=200)
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to change password
+@app.route("/user/profile/change_password/", methods=['PATCH'])
+def change_password():
+    auth = verify_authentication(request.headers)
+    if auth:
+        data = request.get_json()
+        user = User.query.filter_by(alternative_id=auth.alternative_id).first()
+        if user.verify_password(str.encode(data['old_password'])):
+            if data['new_password'] == data['confirm_new_password'] and data['new_password'] != data['old_password']:
+                user.password = str.encode(data['new_password'])
+                user.alternative_id = uuid.uuid4()
+                db.session.add(user)
+                db.session.commit()
+                return Response(status=200)
+            else:
+                return jsonify({
+                    'status': 'New password must match the confirm new password, and new password can not be the same as old password'
+                }), 406
+        else:
+            return jsonify({
+                'status': 'invalid password'
+            }), 403
     else:
         return jsonify({
             'status': 'invalid token'
