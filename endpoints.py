@@ -312,20 +312,22 @@ def add_proposition():
 def course_participants(course_id):
     auth = verify_authentication(request.headers)
     if auth:
-        participants = User.query.filter(CourseSubscription.course_id == course_id).filter(Course.ended == False).join(
-            CourseSubscription).join(Course).all()
-        for participant in participants:
-            if participant.last_login:
-                delattr(participant, 'last_login')
-            if participant.email:
-                delattr(participant, 'email')
-            if participant.created_on:
-                delattr(participant, 'created_on')
-            if participant.activated or participant.activated is not None:
-                delattr(participant, 'activated')
-            if participant.admin or participant.admin is not None:
-                delattr(participant, 'admin')
-        return jsonify(participants), 200
+        with db.session.no_autoflush:
+            participants = User.query.filter(CourseSubscription.course_id == course_id).filter(Course.ended == False).join(
+                CourseSubscription).join(Course).all()
+            for participant in participants:
+                print(participant)
+                if participant.last_login:
+                    delattr(participant, 'last_login')
+                if participant.email:
+                    delattr(participant, 'email')
+                if participant.created_on:
+                    delattr(participant, 'created_on')
+                if participant.activated or participant.activated is not None:
+                    delattr(participant, 'activated')
+                if participant.admin or participant.admin is not None:
+                    delattr(participant, 'admin')
+            return jsonify(participants), 200
     else:
         return jsonify({
             'status': 'invalid token'
