@@ -1,5 +1,8 @@
+import os
 import uuid
 from datetime import timedelta
+from distutils.util import strtobool
+
 import jwt
 from flask import jsonify, request, make_response, session
 from flask_wtf.csrf import CSRFError, generate_csrf, validate_csrf
@@ -19,7 +22,6 @@ def verify_authentication(headers):
 	return None
 
 
-# todo à faire
 def logout_user(headers):
 	token = headers.get('Authorization')[7:]
 	id_to_change = (jwt.decode(token, key=app.config['SECRET_KEY'], algorithms='HS256'))['id']
@@ -40,24 +42,29 @@ def validation_jwt(token_unverified):
 
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
-	return jsonify({
-		'error': e.description,
-	}), 401
+	if bool(strtobool(os.getenv('ENABLE_CSRF'))):
+		return jsonify({
+			'error': e.description,
+		}), 401
 
 
 @app.before_request
 def check_csrf():
-	csrf.protect()
+	if bool(strtobool(os.getenv('ENABLE_CSRF'))):
+		session.permanent = False
+		csrf.protect()
 
 
 @app.after_request
 def handle_cookies(response):
-	# Add CORS header to every response
-	response.headers["Access-Control-Allow-Origin"] = "*"
-	response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS,HEAD"
-	response.headers[
-		"Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Authorization, set-cookies, " \
-	                                      "X-CSRFToken ,Set-Cookie, cookie"
-	response.headers["Access-Control-Allow-Credentials"] = True
-	response.headers["Access-Control-Allow-Credentials"] = True
+	# resp = make_response("Session granted")
+	# Set session cookie for a day
+	# resp.set_cookie('test', 'SESSION_KEY', max_age=60 * 60 * 24, domain='localhost.local')
+	# # Add CORS header to every response
+	# response.headers["Access-Control-Allow-Origin"] = "*"
+	# response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS,HEAD"
+	# response.headers[
+	# 	"Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Authorization, set-cookies, " \
+	#                                       "X-CSRFToken ,Set-Cookie, cookie"
+	# response.headers["Access-Control-Allow-Credentials"] = True
 	return response
