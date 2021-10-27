@@ -233,7 +233,6 @@ def get_owner_courses():
 
 
 # Endpoint to create a new Course
-# TODO supprimer la proposition à la création du cours
 @app.route("/course/", methods=['POST'])
 def add_course():
     auth = verify_authentication(request.headers)
@@ -274,6 +273,34 @@ def cloture_course(course_id):
             db.session.add(course)
             db.session.commit()
             return Response(status=200)
+        else:
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
+# Endpoint to change the attendance status of a participant
+@app.route("/course/<int:course_id>/user_attendance/", methods=["POST"])
+def toggle_attendance_status(course_id):
+    auth = verify_authentication(request.headers)
+    if auth:
+        course = Course.query.filter_by(id=course_id, ended=False).first()
+        if course and course.owner == auth:
+            data = request.get_json()
+            course_subscription = CourseSubscription.query.filter_by(course=course).filter(
+                User.email == data['email']).join(User).first()
+            if course_subscription:
+                course_subscription.present = not course_subscription.present
+                db.session.add(course_subscription)
+                db.session.commit()
+                return jsonify({
+                    "present": course_subscription.present
+                }), 200
+            return Response(status=418)
         else:
             return jsonify({
                 'status': 'Forbidden'
