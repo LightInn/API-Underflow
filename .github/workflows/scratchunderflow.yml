@@ -2,9 +2,9 @@ name: CI/CD Python
 
 on:
   push:
-    branches: [ cicd ]
+    branches: [ master ]
   pull_request:
-    branches: [ cicd ]
+    branches: [ master ]
 
 jobs:
   lint:
