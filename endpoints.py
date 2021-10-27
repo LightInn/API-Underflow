@@ -481,7 +481,7 @@ def delete_user():
     if auth:
         if auth.admin:
             data = request.get_json()
-            user_to_delete = User.query.filter_by(email=data['email'])
+            user_to_delete = User.query.filter_by(email=data['email']).first()
             if user_to_delete:
                 db.session.delete(user_to_delete)
                 db.session.commit()
