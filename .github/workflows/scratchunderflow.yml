@@ -54,4 +54,4 @@ jobs:
           USERNAME: ${{ secrets.REMOTE_USER }}
           PORT: 22
           KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: cd /var/www/api_underflow/ && echo ${{ secrets.ENV_VARIABLES }} >> .env && sudo systemctl restart api-scratchunderflow
+          script: cd /var/www/api_underflow/ && echo "${{ secrets.ENV_VARIABLES }}" >> .env && sudo systemctl restart api-scratchunderflow
