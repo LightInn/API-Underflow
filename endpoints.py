@@ -235,7 +235,7 @@ def cloture_course(course_id):
 
 
 # Endpoint to change the attendance status of a participant
-@app.route("/course/<int:course_id>/user_attendance/", methods=["POST"])
+@app.route("/course/<int:course_id>/user_attendance/", methods=["PATCH"])
 def toggle_attendance_status(course_id):
     auth = verify_authentication(request.headers)
     if auth:
