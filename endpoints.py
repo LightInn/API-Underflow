@@ -180,6 +180,33 @@ def get_courses():
         }), 401
 
 
+# Endpoint to get a list of all courses without the ones created by the logged users
+@app.route("/user/available_courses/", methods=['GET'])
+def get_available_courses():
+    auth = verify_authentication(request.headers)
+    if auth:
+        with db.session.no_autoflush:
+            courses = Course.query.filter(Course.ended == False, Course.owner != auth).all()
+            for course in courses:
+                if course.owner.email:
+                    delattr(course.owner, 'email')
+                if course.owner.admin or course.owner.admin is not None:
+                    delattr(course.owner, 'admin')
+                if course.owner.activated or course.owner.activated is not None:
+                    delattr(course.owner, 'activated')
+                if course.owner.last_login:
+                    delattr(course.owner, 'last_login')
+                if course.owner.created_on:
+                    delattr(course.owner, 'created_on')
+                if course.subject.proposePar:
+                    delattr(course.subject, 'proposePar')
+            return jsonify(courses), 200
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
 # Endpoint to get a list of all courses of current logged user
 @app.route("/user/courses/", methods=['GET'])
 def get_owner_courses():
