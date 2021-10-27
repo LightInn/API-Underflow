@@ -412,6 +412,25 @@ def get_user_profile():
         }), 401
 
 
+# Endpoint to modify the profile of the logged users
+@app.route("/user/profile/edit/", methods=['POST'])
+def edit_user():
+    auth = verify_authentication(request.headers)
+    if auth:
+        data = request.get_json()
+        user = User.query.filter_by(alternative_id=auth.alternative_id).first()
+        user.last_name = data['last_name'].upper()
+        user.first_name = data['first_name'].capitalize()
+        user.class_id = data['class_id']
+        db.session.add(user)
+        db.session.commit()
+        return Response(status=200)
+    else:
+        return jsonify({
+            'status': 'invalid token'
+        }), 401
+
+
 # Endpoint to get all comments of specific user
 @app.route("/user/comments/", methods=['GET'])
 def user_comments():
