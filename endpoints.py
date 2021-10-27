@@ -251,6 +251,11 @@ def add_course():
                             description=data['description'], owner=auth, room=data['room'], subject=check_subject)
         db.session.add(new_course)
         db.session.commit()
+        if data['proposition_id'] is not None:
+            proposition = Proposition.query.filter_by(id=data['proposition_id']).first()
+            if proposition:
+                db.session.delete(proposition)
+                db.session.commit()
         return Response(status=201)
     else:
         return jsonify({
