@@ -319,8 +319,6 @@ def course_participants(course_id):
                 print(participant)
                 if participant.last_login:
                     delattr(participant, 'last_login')
-                if participant.email:
-                    delattr(participant, 'email')
                 if participant.created_on:
                     delattr(participant, 'created_on')
                 if participant.activated or participant.activated is not None:
