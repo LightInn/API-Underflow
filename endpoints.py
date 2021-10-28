@@ -1,5 +1,9 @@
 import re
+
+import sqlalchemy
 from flask import request, Response
+from sqlalchemy import text
+
 from scheme import *
 from security import *
 
@@ -313,19 +317,23 @@ def course_participants(course_id):
     auth = verify_authentication(request.headers)
     if auth:
         with db.session.no_autoflush:
-            participants = User.query.filter(CourseSubscription.course_id == course_id).filter(Course.ended == False).join(
-                CourseSubscription).join(Course).all()
-            for participant in participants:
-                print(participant)
-                if participant.last_login:
-                    delattr(participant, 'last_login')
-                if participant.created_on:
-                    delattr(participant, 'created_on')
-                if participant.activated or participant.activated is not None:
-                    delattr(participant, 'activated')
-                if participant.admin or participant.admin is not None:
-                    delattr(participant, 'admin')
-            return jsonify(participants), 200
+            sql = text(
+                "SELECT u.first_name as first_name, u.last_name as last_name, u.email as email, cs.present as present "
+                "FROM user u "
+                "JOIN course_subscription cs on u.id = cs.participant_id "
+                "JOIN course c on c.id = cs.course_id WHERE c.id = :course_id AND c.ended = false").params(
+                course_id=course_id)
+            result = db.engine.execute(sql)
+            rows = result.fetchall()
+            data = []
+            for row in rows:
+                data.append({
+                    'first_name': row['first_name'],
+                    'last_name': row['last_name'],
+                    'email': row['email'],
+                    'present': row['present']
+                })
+            return jsonify(data), 200
     else:
         return jsonify({
             'status': 'invalid token'
