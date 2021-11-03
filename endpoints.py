@@ -106,9 +106,10 @@ def login():
             }), 200
         else:
             return jsonify({
-                'error': "The account isn't activated !",
-                'not_activated': True
-            }), 401
+                'error': "Le compte n'est pas activé !",
+                'email': data['email'],
+                'activated': False
+            }), 403
     return jsonify({
         'error': 'Wrong email or password'
     }), 401
