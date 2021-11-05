@@ -157,33 +157,6 @@ def logout():
     return Response(status=418)
 
 
-# Endpoint to get a list of all courses
-@app.route("/courses/", methods=['GET'])
-def get_courses():
-    auth = verify_authentication(request.headers)
-    if auth:
-        with db.session.no_autoflush:
-            courses = Course.query.filter_by(ended=False).all()
-            for course in courses:
-                if course.owner.email:
-                    delattr(course.owner, 'email')
-                if course.owner.admin or course.owner.admin is not None:
-                    delattr(course.owner, 'admin')
-                if course.owner.activated or course.owner.activated is not None:
-                    delattr(course.owner, 'activated')
-                if course.owner.last_login:
-                    delattr(course.owner, 'last_login')
-                if course.owner.created_on:
-                    delattr(course.owner, 'created_on')
-                if course.subject.proposePar:
-                    delattr(course.subject, 'proposePar')
-            return jsonify(courses), 200
-    else:
-        return jsonify({
-            'status': 'invalid token'
-        }), 401
-
-
 # Endpoint to get a list of all courses without the ones created by the logged users
 @app.route("/user/available_courses/", methods=['GET'])
 def get_available_courses():
@@ -238,13 +211,30 @@ def get_owner_courses():
         }), 401
 
 
-# Endpoint to create a new Course / or PATCH one if the auth is the owner (# Need complete rework for V2)
-@app.route("/course/", methods=['POST', 'PATCH'])
+# Endpoint To GET all courses / to create a new Course / or PATCH one if the auth is the owner (# Need rework for V2)
+@app.route("/course/", methods=['GET', 'POST', 'PATCH'])
 def action_course():
     auth = verify_authentication(request.headers)
     if auth:
         data = request.get_json()
-        if request.method == 'POST':
+        if request.method == 'GET':
+            with db.session.no_autoflush:
+                courses = Course.query.filter_by(ended=False).all()
+                for course in courses:
+                    if course.owner.email:
+                        delattr(course.owner, 'email')
+                    if course.owner.admin or course.owner.admin is not None:
+                        delattr(course.owner, 'admin')
+                    if course.owner.activated or course.owner.activated is not None:
+                        delattr(course.owner, 'activated')
+                    if course.owner.last_login:
+                        delattr(course.owner, 'last_login')
+                    if course.owner.created_on:
+                        delattr(course.owner, 'created_on')
+                    if course.subject.proposePar:
+                        delattr(course.subject, 'proposePar')
+                return jsonify(courses), 200
+        elif request.method == 'POST':
             check_subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
             if not check_subject:
                 new_subject = Subject(title=data['subject']['title'], proposePar=auth)
