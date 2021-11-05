@@ -1,5 +1,9 @@
 import re
+import cgi
+
+import sqlalchemy
 from flask import request, Response
+from sqlalchemy import text
 from scheme import *
 from security import *
 
@@ -14,6 +18,48 @@ def csrf():
     return jsonify({
         'X-CSRF-Token': csrf_token
     })
+
+# Endpoint to send the mail confirmation
+@app.route("/confirmation-mail/", methods=["POST"])
+def mailto():
+    data = request.get_json()
+    if re.search(r"@((epsi.fr)|(ecoles-wis.net))$", data['email']):
+        msg = Message('Confirmation de mail - Scratch Underflow', sender='noreply@scratchunderflow.fr',
+                      recipients=[data['email']])
+        token = s.dumps(data['email'], salt=os.getenv('MAIL_SALT'))
+        nom = data['email'].split('@')[0]
+        url = f'http://localhost:4200/confirmation-mail/{token}'
+        msg.html = f"<div style='overflow: hidden;'><font size='-1'><u></u> <div style='margin:0;padding:10px 0' bgcolor='#ffffff' marginwidth='0' marginheight='0'> <br><table border='0' width='100%' height='100%' cellpadding='0' cellspacing='0' bgcolor='#ffffff'> <tbody><tr> <td align='center' valign='top' bgcolor='#ffffff' style='background-color:#ffffff'> <table border='0' width='600' cellpadding='0' cellspacing='0' bgcolor='#ffffff'> <tbody><tr> <td bgcolor='#ffffff' style='background-color:#ffffff;padding-left:30px;padding-right:30px;font-size:14px;line-height:20px;font-family:Helvetica,sans-serif;color:#333'> <div style='text-align:center;margin-bottom:10px;margin-top:20px'> <a href='https://scratchunderflow.fr/' target='_blank' ><img alt=' ' height='60' width='250' style='height:60px;width:250px' src='https://scratchunderflow.fr/assets/images/svg/ecureuil-right.svg'></a> </div>Bonjour {nom}, <br><br><strong>Je te souhaites la bienvenue sur Scratch Underflow ! :)</strong> <br><br>Pour activer ton compte, il faut vérifier ton email en cliquant sur ce bouton : <div style='text-align:center'><br><br><a style='display:inline-block;text-transform:uppercase;font-size:12px;line-height:20px;text-decoration:none;padding:10px;color:#fff;background:#6F93FF;margin:auto' href='{url}' target='_blank'>Valider mon email</a><br><br></div>Si le bouton ne fonctionne pas, copiez/collez ce lien dans votre navigateur:<br><br><a style='font-style:italic;color:#627BDF' href='{url}' target='_blank' >{url}</a><br><br>Très bonne journée ! ♥ <br><font color='#888888'> <strong>L'équipe Scratch Underflow</strong> <br></font><br><em style='font-style:italic;color:#aaa'>PS: Si vous n'avez pas demandé à créer de compte sur Scratch Underflow, ignorez simplement cet email.</em> <br><br></td></tr></tbody></table> </td></tr></tbody></table><br><br></div></font></div>"
+        mail.send(msg)
+        return jsonify({
+            'status': f"token link validation sent ! - {data['email']}"
+        }), 200
+    return Response(status=200)
+
+# Endpoint to confirm the token
+@app.route("/confirmation-mail/<token>", methods=["GET"])
+def confirm_email(token):
+    try:
+        email = s.loads(token, salt=os.getenv('MAIL_SALT'), max_age=3600)
+    except SignatureExpired:
+        return jsonify({
+            'status': 'token expired'
+        }), 401
+    check_user = User.query.filter_by(email=email).first()
+    if check_user:
+        check_user.activated = True
+        db.session.add(check_user)
+        db.session.commit()
+        token = jwt.encode(
+            {'id': str(check_user.alternative_id), 'admin': check_user.admin,
+             'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(hours=24)},
+            app.config['SECRET_KEY'], algorithm="HS256")
+        return jsonify({
+            'token': token
+        }), 200
+    return jsonify({
+        'status': 'user does not exist'
+    }), 401
 
 
 # Endpoint to test the API connectivity
@@ -50,13 +96,20 @@ def login():
     data = request.get_json()
     user = User.query.filter_by(email=data['email']).first()
     if user and user.verify_password(str.encode(data['password'])):
-        token = jwt.encode(
-            {'id': str(user.alternative_id), 'admin': user.admin,
-             'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(hours=24)},
-            app.config['SECRET_KEY'], algorithm="HS256")
-        return jsonify({
-            'token': token
-        }), 200
+        if user.activated:
+            token = jwt.encode(
+                {'id': str(user.alternative_id), 'admin': user.admin,
+                 'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(hours=24)},
+                app.config['SECRET_KEY'], algorithm="HS256")
+            return jsonify({
+                'token': token
+            }), 200
+        else:
+            return jsonify({
+                'error': "Le compte n'est pas activé !",
+                'email': data['email'],
+                'activated': False
+            }), 403
     return jsonify({
         'error': 'Wrong email or password'
     }), 401
@@ -235,7 +288,7 @@ def cloture_course(course_id):
 
 
 # Endpoint to change the attendance status of a participant
-@app.route("/course/<int:course_id>/user_attendance/", methods=["POST"])
+@app.route("/course/<int:course_id>/user_attendance/", methods=["PATCH"])
 def toggle_attendance_status(course_id):
     auth = verify_authentication(request.headers)
     if auth:
@@ -312,20 +365,24 @@ def add_proposition():
 def course_participants(course_id):
     auth = verify_authentication(request.headers)
     if auth:
-        participants = User.query.filter(CourseSubscription.course_id == course_id).filter(Course.ended == False).join(
-            CourseSubscription).join(Course).all()
-        for participant in participants:
-            if participant.last_login:
-                delattr(participant, 'last_login')
-            if participant.email:
-                delattr(participant, 'email')
-            if participant.created_on:
-                delattr(participant, 'created_on')
-            if participant.activated or participant.activated is not None:
-                delattr(participant, 'activated')
-            if participant.admin or participant.admin is not None:
-                delattr(participant, 'admin')
-        return jsonify(participants), 200
+        with db.session.no_autoflush:
+            sql = text(
+                "SELECT u.first_name as first_name, u.last_name as last_name, u.email as email, cs.present as present "
+                "FROM user u "
+                "JOIN course_subscription cs on u.id = cs.participant_id "
+                "JOIN course c on c.id = cs.course_id WHERE c.id = :course_id AND c.ended = false").params(
+                course_id=course_id)
+            result = db.engine.execute(sql)
+            rows = result.fetchall()
+            data = []
+            for row in rows:
+                data.append({
+                    'first_name': row['first_name'],
+                    'last_name': row['last_name'],
+                    'email': row['email'],
+                    'present': row['present']
+                })
+            return jsonify(data), 200
     else:
         return jsonify({
             'status': 'invalid token'
