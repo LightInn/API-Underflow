@@ -117,29 +117,20 @@ def login():
     }), 401
 
 
-# Endpoint to add a new subject.
-@app.route("/subject/", methods=["POST"])
+# Endpoint to GET all subjects / to POST a new subject.
+@app.route("/subject/", methods=["GET", "POST"])
 def add_subject():
     auth = verify_authentication(request.headers)
     if auth:
-        data = request.get_json()
-        new_subject = Subject(title=data['title'], proposePar=auth)
-        db.session.add(new_subject)
-        db.session.commit()
-        return Response(status=201)
-    else:
-        return jsonify({
-            'status': 'invalid token'
-        }), 401
-
-
-# Endpoint to get a list of all subjects.
-@app.route("/subjects/", methods=["GET"])
-def get_subjects():
-    auth = verify_authentication(request.headers)
-    if auth:
-        subjects = Subject.query.all()
-        return jsonify(subjects), 200
+        if request.method == "POST":
+            data = request.get_json()
+            new_subject = Subject(title=data['title'], proposePar=auth)
+            db.session.add(new_subject)
+            db.session.commit()
+            return Response(status=201)
+        elif request.method == "GET":
+            subjects = Subject.query.all()
+            return jsonify(subjects), 200
     else:
         return jsonify({
             'status': 'invalid token'
