@@ -19,6 +19,7 @@ def csrf():
         'X-CSRF-Token': csrf_token
     })
 
+
 # Endpoint to send the mail confirmation
 @app.route("/confirmation-mail/", methods=["POST"])
 def mailto():
@@ -35,6 +36,7 @@ def mailto():
             'status': f"token link validation sent ! - {data['email']}"
         }), 200
     return Response(status=200)
+
 
 # Endpoint to confirm the token
 @app.route("/confirmation-mail/<token>", methods=["GET"])
@@ -209,7 +211,7 @@ def get_available_courses():
         }), 401
 
 
-# Endpoint to get a list of all courses of current logged user
+# Endpoint to get a list of all courses of current logged user (# Need complete rework for V2)
 @app.route("/user/courses/", methods=['GET'])
 def get_owner_courses():
     auth = verify_authentication(request.headers)
@@ -236,30 +238,52 @@ def get_owner_courses():
         }), 401
 
 
-# Endpoint to create a new Course
-@app.route("/course/", methods=['POST'])
-def add_course():
+# Endpoint to create a new Course / or PATCH one if the auth is the owner (# Need complete rework for V2)
+@app.route("/course/", methods=['POST', 'PATCH'])
+def action_course():
     auth = verify_authentication(request.headers)
     if auth:
         data = request.get_json()
-        check_subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
-        if not check_subject:
-            new_subject = Subject(title=data['subject']['title'], proposePar=auth)
-            db.session.add(new_subject)
-            db.session.commit()
-            check_subject = Subject.query.filter_by(title=data['subject']['title']).first()
-        classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
-        new_course = Course(title=data['title'], classe=classe,
-                            date_start=datetime.strptime(data['date_start'], '%Y-%m-%dT%H:%M'),
-                            description=data['description'], owner=auth, room=data['room'], subject=check_subject)
-        db.session.add(new_course)
-        db.session.commit()
-        if data['proposition_id'] is not None:
-            proposition = Proposition.query.filter_by(id=data['proposition_id']).first()
-            if proposition:
-                db.session.delete(proposition)
+        if request.method == 'POST':
+            check_subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
+            if not check_subject:
+                new_subject = Subject(title=data['subject']['title'], proposePar=auth)
+                db.session.add(new_subject)
                 db.session.commit()
-        return Response(status=201)
+                check_subject = Subject.query.filter_by(title=data['subject']['title']).first()
+            classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
+            new_course = Course(title=data['title'], classe=classe,
+                                date_start=datetime.strptime(data['date_start'], '%Y-%m-%dT%H:%M'),
+                                description=data['description'], owner=auth, room=data['room'], subject=check_subject)
+            db.session.add(new_course)
+            db.session.commit()
+            if data['proposition_id'] is not None:
+                proposition = Proposition.query.filter_by(id=data['proposition_id']).first()
+                if proposition:
+                    db.session.delete(proposition)
+                    db.session.commit()
+            return Response(status=201)
+        elif request.method == 'PATCH':
+            course_to_patch = Course.query.filter_by(id=data['course_id']).first()
+            if auth == course_to_patch.owner:
+                classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
+                subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
+                if course_to_patch and classe and subject:
+                    course_to_patch.title = data['title']
+                    course_to_patch.classe = classe
+                    course_to_patch.subject = subject
+                    course_to_patch.date_start = datetime.strptime(data['date_start'], '%Y-%m-%dT%H:%M')
+                    course_to_patch.description = data['description']
+                    course_to_patch.room = data['room']
+                    db.session.add(course_to_patch)
+                    db.session.commit()
+                    return Response(status=200)
+                return jsonify({
+                    'status': 'Bad request'
+                }), 400
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
     else:
         return jsonify({
             'status': 'invalid token'
