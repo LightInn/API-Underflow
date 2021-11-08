@@ -245,7 +245,7 @@ def action_course():
                     db.session.commit()
             return Response(status=201)
         elif request.method == 'PATCH':
-            course_to_patch = Course.query.filter_by(id=data['course_id']).first()
+            course_to_patch = Course.query.filter_by(id=data['id']).first()
             if auth == course_to_patch.owner:
                 classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
                 subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
