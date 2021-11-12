@@ -32,6 +32,7 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_USE_TLS'] = bool(strtobool(os.getenv('MAIL_USE_TLS')))
 app.config['MAIL_USE_SSL'] = bool(strtobool(os.getenv('MAIL_USE_SSL')))
+app.config['RESET_PASSWORD_EMAIL'] = os.getenv('RESET_PASSWORD_EMAIL')
 
 csrf = None
 if bool(strtobool(os.getenv('ENABLE_CSRF'))):
