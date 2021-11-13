@@ -9,7 +9,7 @@ from security import *
 
 
 # Endpoint to give csrf-token before 'POST', 'PUT', 'PATCH', 'DELETE' methods, to avoid CSRF attacks
-@app.route("/csrf-token/", methods=["GET"])
+@app.route("/csrf_token/", methods=["GET"])
 def csrf():
     csrf_token = "None"
     if bool(strtobool(os.getenv('ENABLE_CSRF'))):
@@ -19,28 +19,32 @@ def csrf():
         'X-CSRF-Token': csrf_token
     })
 
-# Endpoint to send the mail confirmation
-@app.route("/confirmation-mail/", methods=["POST"])
-def mailto():
+
+# Endpoint to send the confirmation email
+@app.route("/confirmation_mail/", methods=["POST"])
+def send_confirm_email():
     data = request.get_json()
     if re.search(r"@((epsi.fr)|(ecoles-wis.net))$", data['email']):
-        msg = Message('Confirmation de mail - Scratch Underflow', sender='noreply@scratchunderflow.fr',
-                      recipients=[data['email']])
-        token = s.dumps(data['email'], salt=os.getenv('MAIL_SALT'))
-        nom = data['email'].split('@')[0]
-        url = f'http://localhost:4200/confirmation-mail/{token}'
-        msg.html = f"<div style='overflow: hidden;'><font size='-1'><u></u> <div style='margin:0;padding:10px 0' bgcolor='#ffffff' marginwidth='0' marginheight='0'> <br><table border='0' width='100%' height='100%' cellpadding='0' cellspacing='0' bgcolor='#ffffff'> <tbody><tr> <td align='center' valign='top' bgcolor='#ffffff' style='background-color:#ffffff'> <table border='0' width='600' cellpadding='0' cellspacing='0' bgcolor='#ffffff'> <tbody><tr> <td bgcolor='#ffffff' style='background-color:#ffffff;padding-left:30px;padding-right:30px;font-size:14px;line-height:20px;font-family:Helvetica,sans-serif;color:#333'> <div style='text-align:center;margin-bottom:10px;margin-top:20px'> <a href='https://scratchunderflow.fr/' target='_blank' ><img alt=' ' height='60' width='250' style='height:60px;width:250px' src='https://scratchunderflow.fr/assets/images/svg/ecureuil-right.svg'></a> </div>Bonjour {nom}, <br><br><strong>Je te souhaites la bienvenue sur Scratch Underflow ! :)</strong> <br><br>Pour activer ton compte, il faut vérifier ton email en cliquant sur ce bouton : <div style='text-align:center'><br><br><a style='display:inline-block;text-transform:uppercase;font-size:12px;line-height:20px;text-decoration:none;padding:10px;color:#fff;background:#6F93FF;margin:auto' href='{url}' target='_blank'>Valider mon email</a><br><br></div>Si le bouton ne fonctionne pas, copiez/collez ce lien dans votre navigateur:<br><br><a style='font-style:italic;color:#627BDF' href='{url}' target='_blank' >{url}</a><br><br>Très bonne journée ! ♥ <br><font color='#888888'> <strong>L'équipe Scratch Underflow</strong> <br></font><br><em style='font-style:italic;color:#aaa'>PS: Si vous n'avez pas demandé à créer de compte sur Scratch Underflow, ignorez simplement cet email.</em> <br><br></td></tr></tbody></table> </td></tr></tbody></table><br><br></div></font></div>"
-        mail.send(msg)
-        return jsonify({
-            'status': f"token link validation sent ! - {data['email']}"
-        }), 200
-    return Response(status=200)
+        check_email = User.query.filter_by(email=data['email']).first()
+        if check_email:
+            msg = Message('Confirmation de mail - Scratch Underflow', sender='noreply@scratchunderflow.fr',
+                          recipients=[data['email']])
+            token = s.dumps(data['email'], salt=os.getenv('CONFIRM_EMAIL'))
+            nom = data['email'].split('@')[0]
+            url = f'http://localhost:4200/confirmation-mail/{token}'
+            msg.html = f"<div style='overflow: hidden;'><font size='-1'><u></u> <div style='margin:0;padding:10px 0' bgcolor='#ffffff' marginwidth='0' marginheight='0'> <br><table border='0' width='100%' height='100%' cellpadding='0' cellspacing='0' bgcolor='#ffffff'> <tbody><tr> <td align='center' valign='top' bgcolor='#ffffff' style='background-color:#ffffff'> <table border='0' width='600' cellpadding='0' cellspacing='0' bgcolor='#ffffff'> <tbody><tr> <td bgcolor='#ffffff' style='background-color:#ffffff;padding-left:30px;padding-right:30px;font-size:14px;line-height:20px;font-family:Helvetica,sans-serif;color:#333'> <div style='text-align:center;margin-bottom:10px;margin-top:20px'> <a href='https://scratchunderflow.fr/' target='_blank' ><img alt=' ' height='60' width='250' style='height:60px;width:250px' src='https://scratchunderflow.fr/assets/images/svg/ecureuil-right.svg'></a> </div>Bonjour {nom}, <br><br><strong>Je te souhaites la bienvenue sur Scratch Underflow ! :)</strong> <br><br>Pour activer ton compte, il faut vérifier ton email en cliquant sur ce bouton : <div style='text-align:center'><br><br><a style='display:inline-block;text-transform:uppercase;font-size:12px;line-height:20px;text-decoration:none;padding:10px;color:#fff;background:#6F93FF;margin:auto' href='{url}' target='_blank'>Valider mon email</a><br><br></div>Si le bouton ne fonctionne pas, copiez/collez ce lien dans votre navigateur:<br><br><a style='font-style:italic;color:#627BDF' href='{url}' target='_blank' >{url}</a><br><br>Très bonne journée ! ♥ <br><font color='#888888'> <strong>L'équipe Scratch Underflow</strong> <br></font><br><em style='font-style:italic;color:#aaa'>PS: Si vous n'avez pas demandé à créer de compte sur Scratch Underflow, ignorez simplement cet email.</em> <br><br></td></tr></tbody></table> </td></tr></tbody></table><br><br></div></font></div>"
+            mail.send(msg)
+        return Response(status=200)
+    return jsonify({
+        'status': 'Not an accepted email'
+    }), 400
 
-# Endpoint to confirm the token
-@app.route("/confirmation-mail/<token>", methods=["GET"])
-def confirm_email(token):
+
+# Endpoint to confirm the token and confirm user email
+@app.route("/confirmation_mail/<string:token>", methods=["GET"])
+def validate_confirm_email(token):
     try:
-        email = s.loads(token, salt=os.getenv('MAIL_SALT'), max_age=3600)
+        email = s.loads(token, salt=os.getenv('CONFIRM_EMAIL'), max_age=3600)
     except SignatureExpired:
         return jsonify({
             'status': 'token expired'
@@ -50,15 +54,59 @@ def confirm_email(token):
         check_user.activated = True
         db.session.add(check_user)
         db.session.commit()
-        token = jwt.encode(
+        token_jwt = jwt.encode(
             {'id': str(check_user.alternative_id), 'admin': check_user.admin,
              'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(hours=24)},
             app.config['SECRET_KEY'], algorithm="HS256")
         return jsonify({
-            'token': token
+            'token': token_jwt
         }), 200
     return jsonify({
         'status': 'user does not exist'
+    }), 401
+
+
+# Endpoint to send the email & token to reset password
+@app.route("/reset_password/", methods=["POST"])
+def send_email_reset_password():
+    data = request.get_json()
+    if re.search(r"@((epsi.fr)|(ecoles-wis.net))$", data['email']):
+        check_email = User.query.filter_by(email=data['email']).first()
+        if check_email:
+            msg = Message('Réinitialisation de mot de passe - Scratch Underflow', sender='noreply@scratchunderflow.fr',
+                          recipients=[data['email']])
+            token = jwt.encode(
+                {'id': str(check_email.alternative_id),
+                 'exp': datetime.now(pytz.timezone('Europe/Paris')) + timedelta(hours=24),
+                 'email': str(check_email.email),
+                 },
+                app.config['RESET_PASSWORD_EMAIL'], algorithm="HS256")
+            nom = data['email'].split('@')[0]
+            url = f'http://localhost:4200/reset-password/{token}'
+            msg.html = f"<div style='overflow: hidden;'><font size='-1'><u></u> <div style='margin:0;padding:10px 0' bgcolor='#ffffff' marginwidth='0' marginheight='0'><br><table border='0' width='100%' height='100%' cellpadding='0' cellspacing='0' bgcolor='#ffffff'> <tbody> <tr> <td align='center' valign='top' bgcolor='#ffffff' style='background-color:#ffffff'> <table border='0' width='600' cellpadding='0' cellspacing='0' bgcolor='#ffffff'> <tbody> <tr> <td bgcolor='#ffffff' style='background-color:#ffffff;padding-left:30px;padding-right:30px;font-size:14px;line-height:20px;font-family:Helvetica,sans-serif;color:#333'> <div style='text-align:center;margin-bottom:10px;margin-top:20px'><a href='https://scratchunderflow.fr/' target='_blank'><img alt=' ' height='60' width='250' style='height:60px;width:250px' src='https://scratchunderflow.fr/assets/images/svg/ecureuil-right.svg'></a> </div>Bonjour {nom}, <br><br><strong>Bonjour à toi de la part de toute l'équipe Scratch Underflow ! :)</strong> <br><br>Afin de réinitialiser ton mot de passe, clique sur ce bouton : <div style='text-align:center'><br><br><a style='display:inline-block;text-transform:uppercase;font-size:12px;line-height:20px;text-decoration:none;padding:10px;color:#fff;background:#6F93FF;margin:auto' href='{url}' target='_blank'>Changer mon mot de passe</a><br><br></div>Si le bouton ne fonctionne pas, copiez/collez ce lien dans votre navigateur:<br><br><a style='font-style:italic;color:#627BDF' href='{url}' target='_blank'>{url}</a><br><br>Très bonne journée ! ♥ <br><font color='#888888'> <strong>L'équipe Scratch Underflow</strong> <br></font><br><em style='font-style:italic;color:#aaa'>PS: Si vous n'avez pas demandé de ré-initialisation de mot de passe sur Scratch Underflow, ignorez simplement cet email.</em> <br><br></td></tr></tbody> </table> </td></tr></tbody> </table> <br><br></div></font></div>"
+            mail.send(msg)
+        return Response(status=200)
+    return jsonify({
+        'status': 'Not an accepted email'
+    }), 400
+
+
+# Endpoint to reset the password (Params: Password & Token sent by email)
+@app.route("/reset_password/<string:token>", methods=['POST'])
+def reset_password(token):
+    user = validation_jwt_password_reset(token)
+    if user:
+        data = request.get_json()
+        if data['password'] == data['confirm_password']:
+            user.password = str.encode(data['password'])
+            user.alternative_id = uuid.uuid4()
+            db.session.add(user)
+            db.session.commit()
+            return jsonify({
+                'status': 'Password reset successfully'
+            }), 200
+    return jsonify({
+        'status': 'Invalid token'
     }), 401
 
 
@@ -87,7 +135,7 @@ def register():
             db.session.commit()
             return Response(status=201)
     return jsonify({
-        'error': 'Invalid email'
+        'status': 'Invalid email'
     }), 418
 
 
@@ -106,38 +154,29 @@ def login():
             }), 200
         else:
             return jsonify({
-                'error': "Le compte n'est pas activé !",
+                'status': "Le compte n'est pas activé !",
                 'email': data['email'],
                 'activated': False
             }), 403
     return jsonify({
-        'error': 'Wrong email or password'
+        'status': 'Wrong email or password'
     }), 401
 
 
-# Endpoint to add a new subject.
-@app.route("/subject/", methods=["POST"])
+# Endpoint to GET all subjects / to POST a new subject.
+@app.route("/subject/", methods=["GET", "POST"])
 def add_subject():
     auth = verify_authentication(request.headers)
     if auth:
-        data = request.get_json()
-        new_subject = Subject(title=data['title'], proposePar=auth)
-        db.session.add(new_subject)
-        db.session.commit()
-        return Response(status=201)
-    else:
-        return jsonify({
-            'status': 'invalid token'
-        }), 401
-
-
-# Endpoint to get a list of all subjects.
-@app.route("/subjects/", methods=["GET"])
-def get_subjects():
-    auth = verify_authentication(request.headers)
-    if auth:
-        subjects = Subject.query.all()
-        return jsonify(subjects), 200
+        if request.method == "POST":
+            data = request.get_json()
+            new_subject = Subject(title=data['title'], proposePar=auth)
+            db.session.add(new_subject)
+            db.session.commit()
+            return Response(status=201)
+        elif request.method == "GET":
+            subjects = Subject.query.all()
+            return jsonify(subjects), 200
     else:
         return jsonify({
             'status': 'invalid token'
@@ -153,33 +192,6 @@ def logout():
         db.session.commit()
         return Response(status=200)
     return Response(status=418)
-
-
-# Endpoint to get a list of all courses
-@app.route("/courses/", methods=['GET'])
-def get_courses():
-    auth = verify_authentication(request.headers)
-    if auth:
-        with db.session.no_autoflush:
-            courses = Course.query.filter_by(ended=False).all()
-            for course in courses:
-                if course.owner.email:
-                    delattr(course.owner, 'email')
-                if course.owner.admin or course.owner.admin is not None:
-                    delattr(course.owner, 'admin')
-                if course.owner.activated or course.owner.activated is not None:
-                    delattr(course.owner, 'activated')
-                if course.owner.last_login:
-                    delattr(course.owner, 'last_login')
-                if course.owner.created_on:
-                    delattr(course.owner, 'created_on')
-                if course.subject.proposePar:
-                    delattr(course.subject, 'proposePar')
-            return jsonify(courses), 200
-    else:
-        return jsonify({
-            'status': 'invalid token'
-        }), 401
 
 
 # Endpoint to get a list of all courses without the ones created by the logged users
@@ -209,7 +221,7 @@ def get_available_courses():
         }), 401
 
 
-# Endpoint to get a list of all courses of current logged user
+# Endpoint to get a list of all courses of current logged user (# Need complete rework for V2)
 @app.route("/user/courses/", methods=['GET'])
 def get_owner_courses():
     auth = verify_authentication(request.headers)
@@ -236,30 +248,69 @@ def get_owner_courses():
         }), 401
 
 
-# Endpoint to create a new Course
-@app.route("/course/", methods=['POST'])
-def add_course():
+# Endpoint To GET all courses / to create a new Course / or PATCH one if the auth is the owner (# Need rework for V2)
+@app.route("/course/", methods=['GET', 'POST', 'PATCH'])
+def action_course():
     auth = verify_authentication(request.headers)
     if auth:
         data = request.get_json()
-        check_subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
-        if not check_subject:
-            new_subject = Subject(title=data['subject']['title'], proposePar=auth)
-            db.session.add(new_subject)
-            db.session.commit()
-            check_subject = Subject.query.filter_by(title=data['subject']['title']).first()
-        classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
-        new_course = Course(title=data['title'], classe=classe,
-                            date_start=datetime.strptime(data['date_start'], '%Y-%m-%dT%H:%M'),
-                            description=data['description'], owner=auth, room=data['room'], subject=check_subject)
-        db.session.add(new_course)
-        db.session.commit()
-        if data['proposition_id'] is not None:
-            proposition = Proposition.query.filter_by(id=data['proposition_id']).first()
-            if proposition:
-                db.session.delete(proposition)
+        if request.method == 'GET':
+            with db.session.no_autoflush:
+                courses = Course.query.filter_by(ended=False).all()
+                for course in courses:
+                    if course.owner.email:
+                        delattr(course.owner, 'email')
+                    if course.owner.admin or course.owner.admin is not None:
+                        delattr(course.owner, 'admin')
+                    if course.owner.activated or course.owner.activated is not None:
+                        delattr(course.owner, 'activated')
+                    if course.owner.last_login:
+                        delattr(course.owner, 'last_login')
+                    if course.owner.created_on:
+                        delattr(course.owner, 'created_on')
+                    if course.subject.proposePar:
+                        delattr(course.subject, 'proposePar')
+                return jsonify(courses), 200
+        elif request.method == 'POST':
+            check_subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
+            if not check_subject:
+                new_subject = Subject(title=data['subject']['title'], proposePar=auth)
+                db.session.add(new_subject)
                 db.session.commit()
-        return Response(status=201)
+                check_subject = Subject.query.filter_by(title=data['subject']['title']).first()
+            classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
+            new_course = Course(title=data['title'], classe=classe,
+                                date_start=datetime.strptime(data['date_start'], '%Y-%m-%dT%H:%M'),
+                                description=data['description'], owner=auth, room=data['room'], subject=check_subject)
+            db.session.add(new_course)
+            db.session.commit()
+            if data['proposition_id'] is not None:
+                proposition = Proposition.query.filter_by(id=data['proposition_id']).first()
+                if proposition:
+                    db.session.delete(proposition)
+                    db.session.commit()
+            return Response(status=201)
+        elif request.method == 'PATCH':
+            course_to_patch = Course.query.filter_by(id=data['id']).first()
+            if auth == course_to_patch.owner:
+                classe = Class.query.filter_by(id=int(data['classe']['id'])).first()
+                subject = Subject.query.filter_by(id=int(data['subject']['id'])).first()
+                if course_to_patch and classe and subject:
+                    course_to_patch.title = data['title']
+                    course_to_patch.classe = classe
+                    course_to_patch.subject = subject
+                    course_to_patch.date_start = datetime.strptime(data['date_start'], '%Y-%m-%dT%H:%M')
+                    course_to_patch.description = data['description']
+                    course_to_patch.room = data['room']
+                    db.session.add(course_to_patch)
+                    db.session.commit()
+                    return Response(status=200)
+                return jsonify({
+                    'status': 'Bad request'
+                }), 400
+            return jsonify({
+                'status': 'Forbidden'
+            }), 403
     else:
         return jsonify({
             'status': 'invalid token'
