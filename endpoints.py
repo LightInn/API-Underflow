@@ -135,7 +135,7 @@ def register():
             db.session.commit()
             return Response(status=201)
     return jsonify({
-        'error': 'Invalid email'
+        'status': 'Invalid email'
     }), 418
 
 
@@ -154,12 +154,12 @@ def login():
             }), 200
         else:
             return jsonify({
-                'error': "Le compte n'est pas activé !",
+                'status': "Le compte n'est pas activé !",
                 'email': data['email'],
                 'activated': False
             }), 403
     return jsonify({
-        'error': 'Wrong email or password'
+        'status': 'Wrong email or password'
     }), 401
 
 
