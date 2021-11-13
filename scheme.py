@@ -116,7 +116,7 @@ class Course(db.Model):
     title = db.Column(db.String(80), unique=False, nullable=False)
     description = db.Column(db.String(1000), unique=False, nullable=False)
     date_start = db.Column(db.DateTime, nullable=False)
-    duration = db.Column(DECIMAL(2, 1), nullable=True)
+    duration = db.Column(db.Integer, nullable=True)
     ended = db.Column(db.Boolean, nullable=False, default=False)
     room = db.Column(db.String(20), unique=False, nullable=True)
 
