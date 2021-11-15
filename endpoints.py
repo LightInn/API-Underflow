@@ -419,7 +419,7 @@ def course_participants(course_id):
         with db.session.no_autoflush:
             sql = text(
                 "SELECT u.first_name as first_name, u.last_name as last_name, u.email as email, cs.present as present "
-                "FROM user u "
+                "FROM \"user\" u "
                 "JOIN course_subscription cs on u.id = cs.participant_id "
                 "JOIN course c on c.id = cs.course_id WHERE c.id = :course_id AND c.ended = false").params(
                 course_id=course_id)
